@@ -7,7 +7,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
 	// Same image as docker-compose.yml; declared compatible so the PostgreSQL module accepts it
 	private static final DockerImageName POSTGIS_IMAGE = DockerImageName.parse("postgis/postgis:16-3.4")
@@ -15,7 +15,7 @@ class TestcontainersConfiguration {
 
 	@Bean
 	@ServiceConnection
-	PostgreSQLContainer postgresContainer() {
+	public PostgreSQLContainer postgresContainer() {
 		return new PostgreSQLContainer(POSTGIS_IMAGE);
 	}
 
