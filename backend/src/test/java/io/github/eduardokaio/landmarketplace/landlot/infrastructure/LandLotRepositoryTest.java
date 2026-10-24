@@ -1,5 +1,6 @@
 package io.github.eduardokaio.landmarketplace.landlot.infrastructure;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
@@ -115,6 +116,47 @@ class LandLotRepositoryTest {
 
 		assertThat(feature.type()).isEqualTo("Feature");
 		assertThat(feature.id()).isEqualTo(saved.getId());
+	}
+
+	@Test
+	void boundingBoxQueryReturnsLargestLotsFirstUpToTheLimit() {
+		LandLot small = repository.save(squareLot(0, 1));
+		LandLot large = repository.save(squareLot(10, 3));
+		LandLot medium = repository.save(squareLot(20, 2));
+		repository.flush();
+		entityManager.clear();
+
+		List<LandLot> found = repository.findInBoundingBox(-35.3, -6.0, -35.1, -5.8, 2);
+
+		assertThat(found).extracting(LandLot::getId).containsExactly(large.getId(), medium.getId());
+		assertThat(found).extracting(LandLot::getId).doesNotContain(small.getId());
+	}
+
+	@Test
+	void boundingBoxQueryIgnoresLotsOutsideTheBox() {
+		repository.saveAndFlush(squareLot(0, 1));
+
+		assertThat(repository.findInBoundingBox(-35.0, -6.0, -34.9, -5.8, 10)).isEmpty();
+	}
+
+	@Test
+	void distanceQueryMeasuresInMeters() {
+		LandLot lot = repository.saveAndFlush(squareLot(0, 1));
+
+		// The lot starts at -35.2 and the center is 0.001 degree (about 110 m) to the west
+		assertThat(repository.findWithinDistance(-35.201, -5.9, 100)).isEmpty();
+		assertThat(repository.findWithinDistance(-35.201, -5.9, 120)).extracting(LandLot::getId)
+			.containsExactly(lot.getId());
+	}
+
+	/** Square of {@code size} 0.001 degree cells whose lower left corner is {@code offset} cells east. */
+	private static LandLot squareLot(int offset, int size) {
+		double minLon = -35.2 + offset * 0.001;
+		double maxLon = minLon + size * 0.001;
+		double minLat = -5.9;
+		double maxLat = minLat + size * 0.001;
+		return LandLot.create("Lot", "Desc", new BigDecimal("1000.00"), LandLotFixtures.contact(), LandLotFixtures
+			.polygon(minLon, minLat, maxLon, minLat, maxLon, maxLat, minLon, maxLat, minLon, minLat));
 	}
 
 }

@@ -3,7 +3,9 @@ package io.github.eduardokaio.landmarketplace.landlot.api;
 import java.net.URI;
 
 import io.github.eduardokaio.landmarketplace.landlot.domain.InvalidLandLotException;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotNotFoundException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotOverlapException;
+import io.github.eduardokaio.landmarketplace.landlot.domain.SearchRadiusTooLargeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +33,24 @@ public class LandLotExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
 		problem.setType(URI.create("/problems/invalid-land-lot"));
 		problem.setTitle("Invalid land lot");
+		return problem;
+	}
+
+	@ExceptionHandler(LandLotNotFoundException.class)
+	ProblemDetail handleNotFound(LandLotNotFoundException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+		problem.setType(URI.create("/problems/land-lot-not-found"));
+		problem.setTitle("Land lot not found");
+		return problem;
+	}
+
+	@ExceptionHandler(SearchRadiusTooLargeException.class)
+	ProblemDetail handleSearchRadiusTooLarge(SearchRadiusTooLargeException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+		problem.setType(URI.create("/problems/search-radius-too-large"));
+		problem.setTitle("Search radius too large");
+		// Lets the frontend cap the circle while the user drags it
+		problem.setProperty("maxRadiusMeters", ex.getMaxRadiusMeters());
 		return problem;
 	}
 

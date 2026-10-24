@@ -14,9 +14,21 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  web:
+    # Error messages, Bean Validation ones included, are always English, whatever the JVM locale
+    # or the Accept-Language header
+    locale: en
+    locale-resolver: fixed
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+
+land-lot:
+  query:
+    # Caps the circle search so one request cannot scan a whole region
+    max-search-radius-meters: ${LAND_LOT_MAX_SEARCH_RADIUS_METERS:50000}
+    # Most lots returned for one map viewport
+    max-bbox-results: ${LAND_LOT_MAX_BBOX_RESULTS:500}

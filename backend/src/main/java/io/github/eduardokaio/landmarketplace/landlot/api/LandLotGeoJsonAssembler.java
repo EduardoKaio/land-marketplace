@@ -26,7 +26,11 @@ public class LandLotGeoJsonAssembler {
 	}
 
 	public LandLotFeatureCollection toCollection(List<LandLot> lots) {
-		return new LandLotFeatureCollection(lots.stream().map(this::toFeature).toList());
+		return toCollection(lots, false);
+	}
+
+	public LandLotFeatureCollection toCollection(List<LandLot> lots, boolean truncated) {
+		return new LandLotFeatureCollection(lots.stream().map(this::toFeature).toList(), truncated);
 	}
 
 	// More decimals would only be noise: a hand drawn polygon is not that precise

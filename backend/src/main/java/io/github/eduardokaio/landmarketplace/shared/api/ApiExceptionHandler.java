@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 
+import io.github.eduardokaio.landmarketplace.shared.geo.InvalidBoundingBoxException;
 import io.github.eduardokaio.landmarketplace.shared.geo.InvalidGeometryException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -53,6 +54,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
 		problem.setType(URI.create("/problems/invalid-geometry"));
 		problem.setTitle("Invalid geometry");
+		return problem;
+	}
+
+	@ExceptionHandler(InvalidBoundingBoxException.class)
+	ProblemDetail handleInvalidBoundingBox(InvalidBoundingBoxException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+		problem.setType(URI.create("/problems/invalid-bounding-box"));
+		problem.setTitle("Invalid bounding box");
 		return problem;
 	}
 

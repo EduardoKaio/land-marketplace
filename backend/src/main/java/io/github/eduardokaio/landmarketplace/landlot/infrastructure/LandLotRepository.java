@@ -30,4 +30,38 @@ public interface LandLotRepository extends JpaRepository<LandLot, UUID> {
 			""", nativeQuery = true)
 	List<UUID> findOverlappingIds(@Param("geometry") String geoJsonGeometry);
 
+	/**
+	 * Lots with at least one point within the given distance of the center, which is the same as
+	 * intersecting the circle: lots crossing its edge or containing it entirely also match.
+	 * <p>
+	 * Distances are geodesic meters on the WGS84 spheroid. The expression l.geom::geography is
+	 * written exactly as in the land_lot_geog_gist index; any other form would not use the index.
+	 */
+	@Query(value = """
+			SELECT l.*
+			FROM land_lot l
+			WHERE ST_DWithin(l.geom::geography,
+			                 ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+			                 :radius)
+			""", nativeQuery = true)
+	List<LandLot> findWithinDistance(@Param("lon") double lon, @Param("lat") double lat,
+			@Param("radius") double radiusMeters);
+
+	/**
+	 * Lots whose bounding box intersects the given rectangle, largest first, at most {@code limit}.
+	 * <p>
+	 * && only compares bounding boxes, which is enough for a map viewport and the cheapest check
+	 * the GiST index on geom can answer. Largest first because, when zoomed out, small lots are
+	 * smaller than a pixel; the id makes the order deterministic.
+	 */
+	@Query(value = """
+			SELECT l.*
+			FROM land_lot l
+			WHERE l.geom && ST_MakeEnvelope(:minLon, :minLat, :maxLon, :maxLat, 4326)
+			ORDER BY l.area_m2 DESC, l.id
+			LIMIT :limit
+			""", nativeQuery = true)
+	List<LandLot> findInBoundingBox(@Param("minLon") double minLon, @Param("minLat") double minLat,
+			@Param("maxLon") double maxLon, @Param("maxLat") double maxLat, @Param("limit") int limit);
+
 }
