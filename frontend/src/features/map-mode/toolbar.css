@@ -1,0 +1,31 @@
+.map-toolbar {
+  position: absolute;
+  top: 0.75rem;
+  left: 3.25rem;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #c9ced6;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px #0000002e;
+}
+
+.map-toolbar button {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-right: 1px solid #e3e7ec;
+  background: none;
+  color: #1f2933;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.map-toolbar button:last-child {
+  border-right: none;
+}
+
+.map-toolbar button[aria-pressed='true'] {
+  background: #1565c0;
+  color: #ffffff;
+}
