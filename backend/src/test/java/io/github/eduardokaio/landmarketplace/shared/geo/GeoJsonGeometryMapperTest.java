@@ -4,9 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.geom.PrecisionModel;
 import tools.jackson.databind.JsonNode;
 
 import java.util.stream.Stream;
@@ -29,8 +27,7 @@ class GeoJsonGeometryMapperTest {
 			  [[2, 2], [2, 4], [4, 4], [4, 2], [2, 2]]
 			]}""";
 
-	private final GeoJsonGeometryMapper mapper = new GeoJsonGeometryMapper(
-			new GeometryFactory(new PrecisionModel(), GeoConfig.SRID));
+	private final GeoJsonGeometryMapper mapper = new GeoJsonGeometryMapper(GeoConfig.newGeometryFactory());
 
 	@Test
 	void convertsPolygonWithLongitudeAsXAndLatitudeAsY() {
@@ -59,6 +56,33 @@ class GeoJsonGeometryMapperTest {
 		assertThat(geoJson.get("type").stringValue()).isEqualTo("Polygon");
 		assertThat(geoJson.has("crs")).isFalse();
 		assertThat(mapper.toPolygon(geoJson).equalsTopo(polygon)).isTrue();
+	}
+
+	@Test
+	void roundsIncomingCoordinatesToSevenDecimals() {
+		Polygon polygon = mapper.toPolygon("""
+				{"type": "Polygon", "coordinates": [[
+				  [-35.19501234567, -5.88000000004], [-35.1940, -5.8800],
+				  [-35.1940, -5.8790], [-35.19501234567, -5.88000000004]
+				]]}""");
+
+		assertThat(polygon.getCoordinates()[0].getX()).isEqualTo(-35.1950123);
+		assertThat(polygon.getCoordinates()[0].getY()).isEqualTo(-5.88);
+		assertThat(polygon.getSRID()).isEqualTo(GeoConfig.SRID);
+	}
+
+	@Test
+	void writesSevenDecimalsSoTheTextReadsBackToTheSameCoordinates() {
+		Polygon polygon = mapper.toPolygon("""
+				{"type": "Polygon", "coordinates": [[
+				  [-35.1950123, -5.8800001], [-35.1940007, -5.8800001],
+				  [-35.1940007, -5.8790009], [-35.1950123, -5.8800001]
+				]]}""");
+
+		String text = mapper.toGeoJsonText(polygon);
+
+		assertThat(text).contains("-35.1950123").contains("-5.8790009").doesNotContain("crs");
+		assertThat(mapper.toPolygon(text).equalsExact(polygon)).isTrue();
 	}
 
 	@Test

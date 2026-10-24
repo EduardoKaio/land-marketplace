@@ -8,14 +8,13 @@ import io.github.eduardokaio.landmarketplace.shared.geo.GeoConfig;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.geom.PrecisionModel;
 
 /**
  * Test data based on the example of the API contract (a lot near Ponta Negra, Natal).
  */
 public final class LandLotFixtures {
 
-	public static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), GeoConfig.SRID);
+	public static final GeometryFactory GEOMETRY_FACTORY = GeoConfig.newGeometryFactory();
 
 	/** Geodesic area of {@link #pontaNegraSquare()} as given in the API contract example. */
 	public static final double PONTA_NEGRA_AREA_M2 = 12247.3;

@@ -6,6 +6,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.geojson.GeoJsonReader;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;
+import org.locationtech.jts.precision.GeometryPrecisionReducer;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -16,6 +17,9 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * The structure is checked before handing it to JTS because JTS reports problems with
  * generic exceptions (NullPointerException, IllegalArgumentException) that make poor API errors.
+ * <p>
+ * Coordinates are rounded to the precision grid of the geometry factory on the way in and written
+ * with the same number of decimals on the way out.
  */
 @Component
 public class GeoJsonGeometryMapper {
@@ -60,12 +64,17 @@ public class GeoJsonGeometryMapper {
 	}
 
 	public JsonNode toGeoJson(Polygon polygon) {
-		GeoJsonWriter writer = new GeoJsonWriter();
+		return jsonMapper.readTree(toGeoJsonText(polygon));
+	}
+
+	/** GeoJSON text of the polygon, used for API responses and as input of native spatial queries. */
+	public String toGeoJsonText(Polygon polygon) {
+		GeoJsonWriter writer = new GeoJsonWriter(GeoConfig.COORDINATE_DECIMALS);
 		// RFC 7946 removed the "crs" member; GeoJSON is always WGS84 lon/lat
 		writer.setEncodeCRS(false);
 		// RFC 7946 asks for counterclockwise exterior rings
 		writer.setForceCCW(true);
-		return jsonMapper.readTree(writer.write(polygon));
+		return writer.write(polygon);
 	}
 
 	private void checkRing(JsonNode ring) {
@@ -94,7 +103,9 @@ public class GeoJsonGeometryMapper {
 	private Polygon read(JsonNode geometry) {
 		try {
 			Geometry parsed = new GeoJsonReader(geometryFactory).read(geometry.toString());
-			return (Polygon) parsed;
+			// Pointwise only rounds coordinates and never repairs topology; if rounding makes the
+			// polygon invalid, the geometry validation rule reports it
+			return (Polygon) GeometryPrecisionReducer.reducePointwise(parsed, geometryFactory.getPrecisionModel());
 		}
 		catch (ParseException | RuntimeException ex) {
 			throw new InvalidGeometryException("Malformed GeoJSON geometry", ex);

@@ -2,12 +2,14 @@ package io.github.eduardokaio.landmarketplace.landlot.api;
 
 import java.math.BigDecimal;
 
+import io.github.eduardokaio.landmarketplace.landlot.application.CreateLandLotCommand;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.locationtech.jts.geom.Polygon;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -20,5 +22,9 @@ public record CreateLandLotRequest(
 		@NotBlank String description,
 		@NotNull @Valid ContactDto contact,
 		@NotNull JsonNode geometry) {
+
+	public CreateLandLotCommand toCommand(Polygon polygon) {
+		return new CreateLandLotCommand(title, description, price, contact.toDomain(), polygon);
+	}
 
 }
