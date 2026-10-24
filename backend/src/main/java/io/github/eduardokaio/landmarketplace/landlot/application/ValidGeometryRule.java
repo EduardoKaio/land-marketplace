@@ -24,7 +24,9 @@ public class ValidGeometryRule implements LandLotRule {
 		}
 	}
 
-	private static String describe(TopologyValidationError error) {
+	// Package-private for the test: JTS errors normally carry a location, but the API allows none,
+	// and a NullPointerException here would turn a client error into a 500
+	static String describe(TopologyValidationError error) {
 		Coordinate location = error.getCoordinate();
 		if (location == null) {
 			return error.getMessage();

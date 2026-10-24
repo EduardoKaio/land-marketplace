@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/land-lots")
-public class LandLotController {
+public class LandLotController implements LandLotApi {
 
 	private final LandLotService service;
 
@@ -41,6 +41,7 @@ public class LandLotController {
 		this.assembler = assembler;
 	}
 
+	@Override
 	@PostMapping
 	public ResponseEntity<LandLotFeature> create(@Valid @RequestBody CreateLandLotRequest request) {
 		Polygon polygon = geometryMapper.toPolygon(request.geometry());
@@ -53,6 +54,7 @@ public class LandLotController {
 	}
 
 	/** Lots in the visible map area, given as bbox=minLon,minLat,maxLon,maxLat. */
+	@Override
 	@GetMapping
 	public LandLotFeatureCollection findInBoundingBox(@RequestParam String bbox) {
 		LandLotSlice slice = queryService.findInBoundingBox(BoundingBox.parse(bbox));
@@ -60,11 +62,13 @@ public class LandLotController {
 	}
 
 	/** Lots intersecting the circle drawn by the user. */
+	@Override
 	@GetMapping("/search")
 	public LandLotFeatureCollection search(@Valid LandLotSearchRequest request) {
 		return assembler.toCollection(queryService.search(request.lon(), request.lat(), request.radius()));
 	}
 
+	@Override
 	@GetMapping("/{id}")
 	public LandLotFeature findById(@PathVariable UUID id) {
 		return assembler.toFeature(queryService.getById(id));

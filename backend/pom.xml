@@ -131,8 +131,13 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>${jacoco.version}</version>
 				<configuration>
+					<!--
+						Only the main class is excluded: tests start the context without calling main(), so
+						its lines would always count as missed without meaning anything. Configuration
+						classes stay in: every @SpringBootTest runs them, so they are covered honestly, and
+						some hold decisions worth testing (CORS origins, exposed headers).
+					-->
 					<excludes>
-						<!-- Only bootstraps Spring; nothing to test -->
 						<exclude>io/github/eduardokaio/landmarketplace/LandMarketplaceApiApplication.class</exclude>
 					</excludes>
 				</configuration>
@@ -162,10 +167,16 @@
 									<element>BUNDLE</element>
 									<limits>
 										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.minimum.coverage}</minimum>
+										</limit>
+										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
 											<minimum>${jacoco.minimum.coverage}</minimum>
 										</limit>
+										<!-- Stricter than lines: an if whose other side never runs in a test fails here -->
 										<limit>
 											<counter>BRANCH</counter>
 											<value>COVEREDRATIO</value>

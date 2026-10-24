@@ -20,6 +20,13 @@ spring:
     locale: en
     locale-resolver: fixed
 
+server:
+  error:
+    # Already the defaults; explicit because errors that never reach Spring MVC (filters) are
+    # rendered by Spring Boot and must not expose internals either
+    include-stacktrace: never
+    include-message: never
+
 management:
   endpoints:
     web:
@@ -32,3 +39,8 @@ land-lot:
     max-search-radius-meters: ${LAND_LOT_MAX_SEARCH_RADIUS_METERS:50000}
     # Most lots returned for one map viewport
     max-bbox-results: ${LAND_LOT_MAX_BBOX_RESULTS:500}
+
+app:
+  cors:
+    # Comma separated exact origins; the default is the Vite dev server
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

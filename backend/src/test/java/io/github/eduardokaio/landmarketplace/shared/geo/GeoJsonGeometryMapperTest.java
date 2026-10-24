@@ -105,6 +105,12 @@ class GeoJsonGeometryMapperTest {
 						{"type": "MultiPolygon", "coordinates": []}""", "Geometry type must be Polygon"),
 				Arguments.of("type missing", """
 						{"coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}""", "Geometry type must be Polygon, got: nothing"),
+				Arguments.of("type not a string", """
+						{"type": 42, "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}""",
+						"Geometry type must be Polygon, got: 42"),
+				Arguments.of("type null", """
+						{"type": null, "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}""",
+						"Geometry type must be Polygon, got: nothing"),
 				Arguments.of("coordinates missing", """
 						{"type": "Polygon"}""", "Polygon coordinates are missing"),
 				Arguments.of("coordinates empty", """
@@ -119,6 +125,17 @@ class GeoJsonGeometryMapperTest {
 				Arguments.of("position not numeric", """
 						{"type": "Polygon", "coordinates": [[[0, 0], [1, "a"], [1, 1], [0, 0]]]}""",
 						"Polygon position must be [longitude, latitude]"),
+				Arguments.of("longitude not numeric", """
+						{"type": "Polygon", "coordinates": [[[0, 0], ["a", 1], [1, 1], [0, 0]]]}""",
+						"Polygon position must be [longitude, latitude]"),
+				Arguments.of("position not an array", """
+						{"type": "Polygon", "coordinates": [[[0, 0], 5, [1, 1], [0, 0]]]}""",
+						"Polygon position must be [longitude, latitude]"),
+				// Passes the structural checks (only the first two values are checked) but JTS fails
+				// to read the third one, so the reader error must still become a 422
+				Arguments.of("third value not numeric", """
+						{"type": "Polygon", "coordinates": [[[0, 0, "x"], [1, 0, "x"], [1, 1, "x"], [0, 0, "x"]]]}""",
+						"Malformed GeoJSON geometry"),
 				Arguments.of("position with one value", """
 						{"type": "Polygon", "coordinates": [[[0, 0], [1], [1, 1], [0, 0]]]}""",
 						"Polygon position must be [longitude, latitude]"),

@@ -7,7 +7,9 @@ import io.github.eduardokaio.landmarketplace.shared.geo.InvalidGeometryException
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.operation.valid.TopologyValidationError;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -37,6 +39,13 @@ class ValidGeometryRuleTest {
 		assertThatThrownBy(() -> rule.validate(command(withBadHole)))
 			.isInstanceOf(InvalidGeometryException.class)
 			.hasMessageStartingWith("Hole lies outside shell");
+	}
+
+	@Test
+	void describesErrorWithoutLocationUsingOnlyTheReason() {
+		TopologyValidationError error = new TopologyValidationError(TopologyValidationError.TOO_FEW_POINTS);
+
+		assertThat(ValidGeometryRule.describe(error)).isEqualTo("Too few distinct points in geometry component");
 	}
 
 	private static CreateLandLotCommand command(Polygon geometry) {
