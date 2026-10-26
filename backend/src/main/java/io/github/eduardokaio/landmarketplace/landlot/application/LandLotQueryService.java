@@ -44,6 +44,11 @@ public class LandLotQueryService {
 		return new LandLotSlice(truncated ? lots.subList(0, max) : lots, truncated);
 	}
 
+	/** The lots of one account, newest first. */
+	public List<LandLot> findByOwner(UUID ownerId) {
+		return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
+	}
+
 	public LandLot getById(UUID id) {
 		return repository.findById(id).orElseThrow(() -> new LandLotNotFoundException(id));
 	}

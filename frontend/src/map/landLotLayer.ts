@@ -45,6 +45,11 @@ export function readLandLotFeatures(
   return geoJson.readFeatures(data) as Feature<Polygon>[]
 }
 
+/** Extent of a lot in the map projection, to zoom the view onto it. */
+export function lotExtent(lot: LandLotFeature): Extent {
+  return readLandLotFeatures(lot)[0].getGeometry()!.getExtent()
+}
+
 /**
  * Lots loaded for the visible area: the bbox strategy calls the loader with the extent of each
  * new view, and the source skips extents it already loaded.

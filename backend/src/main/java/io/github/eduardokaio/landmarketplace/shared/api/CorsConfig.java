@@ -25,7 +25,7 @@ public class CorsConfig implements WebMvcConfigurer {
 			// Exact origins, never "*": any site could otherwise call the API from a user's browser
 			.allowedOrigins(properties.allowedOrigins().toArray(String[]::new))
 			// Only the methods the API has; add more when endpoints need them
-			.allowedMethods("GET", "POST")
+			.allowedMethods("GET", "POST", "PUT", "DELETE")
 			// Browsers hide response headers from cross-origin scripts unless they are listed here;
 			// the frontend reads Location after a 201
 			.exposedHeaders(HttpHeaders.LOCATION)

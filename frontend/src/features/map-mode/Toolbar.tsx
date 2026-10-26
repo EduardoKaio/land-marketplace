@@ -3,7 +3,7 @@ import './toolbar.css'
 
 const TOOLS: { mode: MapMode; label: string }[] = [
   { mode: 'explore', label: 'Explore' },
-  { mode: 'draw-lot', label: 'Draw lot' },
+  { mode: 'draw-lot', label: 'New lot' },
   { mode: 'search', label: 'Search' },
 ]
 

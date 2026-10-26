@@ -65,6 +65,32 @@ export interface CircleSearch {
   radius: number
 }
 
+export interface User {
+  id: string
+  name: string
+  email: string
+}
+
+/** Answer of register and login. */
+export interface AuthResponse {
+  accessToken: string
+  tokenType: 'Bearer'
+  /** Seconds until the token expires. */
+  expiresIn: number
+  user: User
+}
+
+export interface RegisterRequest {
+  name: string
+  email: string
+  password: string
+}
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
 export interface FieldError {
   field: string
   message: string

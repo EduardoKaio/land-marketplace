@@ -6,6 +6,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
+import io.github.eduardokaio.landmarketplace.auth.AccountFixtures;
+import io.github.eduardokaio.landmarketplace.auth.infrastructure.AppUserRepository;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,9 +50,17 @@ class LandLotControllerTest {
 	@Autowired
 	private LandLotRepository repository;
 
+	@Autowired
+	private AppUserRepository accounts;
+
+	private UUID ownerId;
+
 	@BeforeEach
 	void cleanDatabase() {
+		// Lots first: they reference their owners
 		repository.deleteAll();
+		accounts.deleteAll();
+		ownerId = accounts.save(AccountFixtures.account("owner@example.com")).getId();
 	}
 
 	@Test
@@ -68,7 +79,8 @@ class LandLotControllerTest {
 
 		String id = idOf(result);
 		assertThat(result.getResponse().getHeader("Location")).endsWith("/api/land-lots/" + id);
-		assertThat(repository.existsById(UUID.fromString(id))).isTrue();
+		assertThat(repository.findById(UUID.fromString(id))).get()
+			.satisfies(lot -> assertThat(lot.getOwnerId()).isEqualTo(ownerId));
 	}
 
 	@Test
@@ -207,7 +219,11 @@ class LandLotControllerTest {
 	}
 
 	private ResultActions submitBody(String body) throws Exception {
-		return mockMvc.perform(post("/api/land-lots").contentType(MediaType.APPLICATION_JSON).content(body));
+		// jwt() puts an authenticated token in the security context without signing one; the access
+		// rules themselves are tested in LandLotAccessTest
+		return mockMvc.perform(post("/api/land-lots").with(jwt().jwt(token -> token.subject(ownerId.toString())))
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body));
 	}
 
 	private static String square(int x1, int y1, int x2, int y2) {

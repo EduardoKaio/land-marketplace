@@ -23,4 +23,11 @@ describe('mapModeReducer', () => {
       mode: 'explore',
     })
   })
+
+  it('leaves the lot drawing when the user logs out, but keeps a search', () => {
+    expect(mapModeReducer({ mode: 'draw-lot' }, { type: 'logged-out' })).toEqual({
+      mode: 'explore',
+    })
+    expect(mapModeReducer({ mode: 'search' }, { type: 'logged-out' })).toEqual({ mode: 'search' })
+  })
 })

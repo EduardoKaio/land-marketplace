@@ -7,7 +7,7 @@ describe('Toolbar', () => {
   it('marks the active tool as pressed', () => {
     render(<Toolbar mode="draw-lot" onSelect={() => {}} />)
 
-    expect(screen.getByRole('button', { name: 'Draw lot' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'New lot' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'Search' })).toHaveAttribute('aria-pressed', 'false')
   })

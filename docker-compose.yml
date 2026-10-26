@@ -37,6 +37,10 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE-demo}
       LAND_LOT_MAX_SEARCH_RADIUS_METERS: ${LAND_LOT_MAX_SEARCH_RADIUS_METERS:-50000}
       LAND_LOT_MAX_BBOX_RESULTS: ${LAND_LOT_MAX_BBOX_RESULTS:-500}
+      # Development default: set JWT_SECRET (at least 32 bytes) in any deployment, or anyone who
+      # reads this file can forge tokens
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-before-any-deployment}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-PT2H}
     ports:
       - "${API_PORT:-8080}:8080"
     healthcheck:

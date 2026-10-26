@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type OlMap from 'ol/Map'
@@ -11,12 +11,14 @@ import type { AtPixelOptions } from 'ol/Map'
 import { fromLonLat } from 'ol/proj'
 import { describe, expect, it, vi } from 'vitest'
 import type { LandLotFeatureCollection } from '../../api/types'
+import { requestJson } from '../../api/http'
 import { useMap } from '../../map/MapContext'
 import { MapView } from '../../map/MapView'
 import { CONFLICT_PROPERTY, landLotStyle } from '../../map/landLotStyle'
 import type VectorLayer from 'ol/layer/Vector'
 import { landLotFeature, pontaNegraPolygon } from '../../test/fixtures'
 import { TestProviders } from '../../test/providers'
+import { signIn } from '../../test/session'
 import { server } from '../../test/server'
 import { MapWorkspace } from './MapWorkspace'
 import type { LandLotSource } from '../../map/landLotLayer'
@@ -87,11 +89,12 @@ function serveSearch(response: () => Response): { url: () => URL } {
 
 describe('MapWorkspace', () => {
   it('adds the drawing interactions only while drawing a lot', async () => {
+    signIn()
     const user = userEvent.setup()
     const { draw } = renderWorkspace()
     expect(draw()).toBeUndefined()
 
-    await user.click(screen.getByRole('button', { name: 'Draw lot' }))
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
     expect(draw()).toBeDefined()
     expect(screen.getByText(/Click to add vertices/)).toBeInTheDocument()
 
@@ -100,12 +103,13 @@ describe('MapWorkspace', () => {
   })
 
   it('opens the form when the polygon is finished and adds the published lot to the map', async () => {
+    signIn()
     server.use(
       http.post('*/api/land-lots', () => HttpResponse.json(landLotFeature(), { status: 201 })),
     )
     const user = userEvent.setup()
     const { draw, lotSource } = renderWorkspace()
-    await user.click(screen.getByRole('button', { name: 'Draw lot' }))
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
 
     drawPolygon(draw()!)
     await user.type(screen.getByLabelText('Title'), 'Corner lot')
@@ -122,6 +126,7 @@ describe('MapWorkspace', () => {
   })
 
   it('marks the conflicting lots in red and clears the marks on cancel', async () => {
+    signIn()
     server.use(
       http.post('*/api/land-lots', () =>
         HttpResponse.json(
@@ -134,7 +139,7 @@ describe('MapWorkspace', () => {
     const { draw, lotSource } = renderWorkspace()
     const [existing] = readLandLotFeatures(landLotFeature({ id: 'existing' }))
     lotSource().addFeature(existing)
-    await user.click(screen.getByRole('button', { name: 'Draw lot' }))
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
 
     drawPolygon(draw()!)
     await user.type(screen.getByLabelText('Title'), 'Overlapping lot')
@@ -283,5 +288,106 @@ describe('MapWorkspace', () => {
     expect(map.getLayers().getLength()).toBe(layersBefore)
     expect(lotLayers()).toHaveLength(1)
     expect(lotLayers()[0].getVisible()).toBe(true)
+  })
+
+  it('asks to log in before drawing a lot, then opens the drawing', async () => {
+    server.use(
+      http.post('*/api/auth/login', () =>
+        HttpResponse.json({
+          accessToken: 'token',
+          tokenType: 'Bearer',
+          expiresIn: 7200,
+          user: { id: 'u1', name: 'Kaio', email: 'kaio@example.com' },
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Log in' })
+    expect(dialog).toHaveTextContent('Log in to publish a lot.')
+    expect(draw()).toBeUndefined()
+
+    await user.type(screen.getByLabelText('Email'), 'kaio@example.com')
+    await user.type(screen.getByLabelText('Password'), 'secret123')
+    await user.click(within(dialog).getByRole('button', { name: 'Log in' }))
+
+    expect(await screen.findByText(/Click to add vertices/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New lot' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Kaio')).toBeInTheDocument()
+  })
+
+  it('opens the login from the account bar and stays exploring', async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('leaves the drawing when the user logs out', async () => {
+    signIn()
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
+    expect(draw()).toBeDefined()
+
+    await user.click(screen.getByRole('button', { name: 'Log out' }))
+
+    expect(draw()).toBeUndefined()
+    expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument()
+  })
+
+  it('leaves the drawing when the session expires', async () => {
+    signIn()
+    server.use(
+      http.get('*/api/me/land-lots', () =>
+        HttpResponse.json(
+          { status: 401 },
+          { status: 401, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
+
+    await act(() => requestJson('/api/me/land-lots').catch(() => {}))
+
+    expect(draw()).toBeUndefined()
+    expect(screen.getByText('Your session expired. Please log in again.')).toBeInTheDocument()
+  })
+
+  it('opens my lots from the account bar, leaving the current tool', async () => {
+    signIn()
+    server.use(
+      http.get('*/api/me/land-lots', () =>
+        HttpResponse.json({
+          type: 'FeatureCollection',
+          features: [landLotFeature()],
+          truncated: false,
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    await user.click(screen.getByRole('button', { name: 'My lots' }))
+
+    expect(screen.getByRole('complementary', { name: 'My lots' })).toBeInTheDocument()
+    expect(await screen.findByText('Corner lot')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-pressed', 'true')
+
+    // Another tool takes the right side back
+    await user.click(screen.getByRole('button', { name: 'New lot' }))
+    expect(screen.queryByRole('complementary', { name: 'My lots' })).not.toBeInTheDocument()
   })
 })

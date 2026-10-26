@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { AuthProvider } from '../features/auth/AuthProvider'
 import { ToastProvider } from '../shared/ui/toast/ToastProvider'
 
 /** App-level providers for component tests; queries never retry so errors show up at once. */
@@ -9,7 +10,9 @@ export function TestProviders({ children }: { children: ReactNode }) {
   })
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </ToastProvider>
     </QueryClientProvider>
   )
 }

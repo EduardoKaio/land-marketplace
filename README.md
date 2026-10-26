@@ -32,12 +32,28 @@ docker compose up --build
 | db | localhost:15432 | PostGIS. Host port 15432 so it does not clash with a local PostgreSQL |
 
 The API container runs with the `demo` Spring profile, which loads six sample lots around Natal
-(RN), including two neighbors in Ponta Negra that share a border. To start with an empty database
+(RN), including two neighbors in Ponta Negra that share a border. They belong to the demo account
+**demo@example.com / demo1234**. To start with an empty database
 instead, set the profile to an empty value: `SPRING_PROFILES_ACTIVE= docker compose up --build`.
 
 Start over with a clean database: `docker compose down -v && docker compose up --build`.
 
 Every setting has a default in `docker-compose.yml`; `.env.example` lists them.
+
+## Accounts and access
+
+Anyone can browse and search lots. Publishing needs an account: register or log in from the app
+(or `POST /api/auth/register` and `POST /api/auth/login`), and send the returned token as
+`Authorization: Bearer <token>`.
+
+- Only the owner of a lot can update it (`PUT /api/land-lots/{id}`, details only: the polygon of a
+  published lot cannot change) or delete it (`DELETE /api/land-lots/{id}`). Others get 403.
+- `GET /api/me/land-lots` lists the lots of the logged in account.
+- Tokens are JWTs signed with HS256 by Spring Security, valid for `JWT_EXPIRATION` (2 hours by
+  default). The default `JWT_SECRET` is for development only; any deployment must set its own.
+- Passwords are stored as BCrypt hashes and need 8 to 64 characters with a letter and a digit.
+
+Not covered yet: refresh tokens, revoking tokens before they expire and rate limiting of the login.
 
 ## Running locally
 

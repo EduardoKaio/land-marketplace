@@ -3,6 +3,7 @@ package io.github.eduardokaio.landmarketplace.shared.api;
 import java.util.List;
 import java.util.UUID;
 
+import io.github.eduardokaio.landmarketplace.auth.infrastructure.SecurityConfig;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotController;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotGeoJsonAssembler;
 import io.github.eduardokaio.landmarketplace.landlot.application.LandLotQueryService;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -36,7 +38,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * failure can be simulated without a database.
  */
 @WebMvcTest(LandLotController.class)
-@Import({ GeoConfig.class, GeoJsonGeometryMapper.class, LandLotGeoJsonAssembler.class })
+// The slice does not pick up @Configuration classes, and without SecurityConfig Spring Boot's
+// default security (everything authenticated) would apply
+@Import({ SecurityConfig.class, GeoConfig.class, GeoJsonGeometryMapper.class, LandLotGeoJsonAssembler.class })
 @ExtendWith(OutputCaptureExtension.class)
 class ApiErrorHandlingTest {
 
@@ -102,9 +106,11 @@ class ApiErrorHandlingTest {
 	@Test
 	void featureErrorsAreNotSwallowedByTheCatchAll() throws Exception {
 		UUID conflicting = UUID.randomUUID();
-		given(service.create(any())).willThrow(new LandLotOverlapException(List.of(conflicting)));
+		given(service.create(any(), any())).willThrow(new LandLotOverlapException(List.of(conflicting)));
 
-		mockMvc.perform(post("/api/land-lots").contentType(MediaType.APPLICATION_JSON).content("""
+		mockMvc.perform(post("/api/land-lots").with(jwt().jwt(token -> token.subject(UUID.randomUUID().toString())))
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
 				{"title": "Lot", "price": 1000, "description": "Desc",
 				 "contact": {"name": "Kaio", "email": "kaio@example.com"},
 				 "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}}"""))
@@ -113,9 +119,10 @@ class ApiErrorHandlingTest {
 			.andExpect(jsonPath("$.conflictingLotIds[0]").value(conflicting.toString()));
 	}
 
+	// With a token: without one, unknown routes are 401 like every route that is not public
 	@Test
 	void unknownRouteIsAProblemToo() throws Exception {
-		mockMvc.perform(get("/api/nothing-here"))
+		mockMvc.perform(get("/api/nothing-here").with(jwt()))
 			.andExpect(status().isNotFound())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 	}

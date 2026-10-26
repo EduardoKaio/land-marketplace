@@ -2,8 +2,10 @@ package io.github.eduardokaio.landmarketplace.landlot.infrastructure;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
+import io.github.eduardokaio.landmarketplace.auth.AccountFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.LandLotFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotFeature;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotFeatureCollection;
@@ -13,6 +15,7 @@ import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotStatus;
 import io.github.eduardokaio.landmarketplace.shared.geo.GeoConfig;
 import io.github.eduardokaio.landmarketplace.shared.geo.GeoJsonGeometryMapper;
 import jakarta.persistence.PersistenceException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -45,9 +48,17 @@ class LandLotRepositoryTest {
 	@Autowired
 	private LandLotGeoJsonAssembler assembler;
 
+	/** Every lot needs an existing account as owner: owner_id is a foreign key. */
+	private UUID ownerId;
+
+	@BeforeEach
+	void createOwner() {
+		ownerId = entityManager.persistFlushFind(AccountFixtures.account("owner@example.com")).getId();
+	}
+
 	@Test
 	void savesAndReadsLotWithAreaComputedByPostgis() {
-		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot());
+		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot(ownerId));
 		entityManager.clear();
 
 		LandLot found = repository.findById(saved.getId()).orElseThrow();
@@ -67,7 +78,7 @@ class LandLotRepositoryTest {
 
 	@Test
 	void areaIsAvailableRightAfterInsertWithoutReloading() {
-		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot());
+		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot(ownerId));
 
 		assertThat(saved.getAreaM2()).isCloseTo(LandLotFixtures.PONTA_NEGRA_AREA_M2, withinPercentage(0.1));
 	}
@@ -86,7 +97,7 @@ class LandLotRepositoryTest {
 
 	@Test
 	void buildsGeoJsonFeatureFollowingTheApiContract() {
-		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot());
+		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot(ownerId));
 
 		LandLotFeatureCollection collection = assembler.toCollection(List.of(saved));
 		JsonNode json = JsonMapper.shared().valueToTree(collection);
@@ -110,7 +121,7 @@ class LandLotRepositoryTest {
 
 	@Test
 	void featureTypeIsFixed() {
-		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot());
+		LandLot saved = repository.saveAndFlush(LandLotFixtures.pontaNegraLot(ownerId));
 
 		LandLotFeature feature = assembler.toFeature(saved);
 
@@ -150,13 +161,33 @@ class LandLotRepositoryTest {
 	}
 
 	/** Square of {@code size} 0.001 degree cells whose lower left corner is {@code offset} cells east. */
-	private static LandLot squareLot(int offset, int size) {
+	private LandLot squareLot(int offset, int size) {
 		double minLon = -35.2 + offset * 0.001;
 		double maxLon = minLon + size * 0.001;
 		double minLat = -5.9;
 		double maxLat = minLat + size * 0.001;
 		return LandLot.create("Lot", "Desc", new BigDecimal("1000.00"), LandLotFixtures.contact(), LandLotFixtures
-			.polygon(minLon, minLat, maxLon, minLat, maxLon, maxLat, minLon, maxLat, minLon, minLat));
+			.polygon(minLon, minLat, maxLon, minLat, maxLon, maxLat, minLon, maxLat, minLon, minLat), ownerId);
+	}
+
+	@Test
+	void findsTheLotsOfOneOwnerNewestFirst() {
+		UUID otherOwnerId = entityManager.persistFlushFind(AccountFixtures.account("other@example.com")).getId();
+		LandLot older = repository.saveAndFlush(squareLot(0, 1));
+		LandLot newer = repository.saveAndFlush(squareLot(10, 1));
+		repository.saveAndFlush(LandLot.create("Not mine", "Desc", new BigDecimal("1000.00"), LandLotFixtures.contact(),
+				LandLotFixtures.polygon(-35.0, -5.9, -34.999, -5.9, -34.999, -5.899, -35.0, -5.899, -35.0, -5.9),
+				otherOwnerId));
+
+		assertThat(repository.findByOwnerIdOrderByCreatedAtDesc(ownerId)).extracting(LandLot::getId)
+			.containsExactly(newer.getId(), older.getId());
+	}
+
+	@Test
+	void databaseRejectsAnOwnerThatIsNotAnAccount() {
+		LandLot orphan = LandLotFixtures.pontaNegraLot(UUID.randomUUID());
+
+		assertThatThrownBy(() -> repository.saveAndFlush(orphan)).hasMessageContaining("owner_id");
 	}
 
 }

@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
+import io.github.eduardokaio.landmarketplace.auth.AccountFixtures;
+import io.github.eduardokaio.landmarketplace.auth.infrastructure.AppUserRepository;
 import io.github.eduardokaio.landmarketplace.landlot.LandLotFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLot;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
@@ -55,9 +57,17 @@ class LandLotQueryApiTest {
 	@Autowired
 	private LandLotRepository repository;
 
+	@Autowired
+	private AppUserRepository accounts;
+
+	private UUID ownerId;
+
 	@BeforeEach
 	void cleanDatabase() {
+		// Lots first: they reference their owners
 		repository.deleteAll();
+		accounts.deleteAll();
+		ownerId = accounts.save(AccountFixtures.account("owner@example.com")).getId();
 	}
 
 	@Test
@@ -238,7 +248,8 @@ class LandLotQueryApiTest {
 		double maxLon = CENTER_LON + x2 * CELL;
 		double maxLat = CENTER_LAT + y2 * CELL;
 		LandLot lot = LandLot.create("Lot", "Desc", new BigDecimal("100000.00"), LandLotFixtures.contact(),
-				LandLotFixtures.polygon(minLon, minLat, maxLon, minLat, maxLon, maxLat, minLon, maxLat, minLon, minLat));
+				LandLotFixtures.polygon(minLon, minLat, maxLon, minLat, maxLon, maxLat, minLon, maxLat, minLon, minLat),
+				ownerId);
 		return repository.saveAndFlush(lot).getId().toString();
 	}
 

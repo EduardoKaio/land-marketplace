@@ -1,9 +1,10 @@
 import { useForm, useWatch, type FieldError } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type Polygon from 'ol/geom/Polygon'
 import type { ReactNode } from 'react'
 import { createLandLot } from '../../api/landLots'
+import { MY_LOTS_KEY } from '../../api/queryKeys'
 import type { LandLotFeature } from '../../api/types'
 import { formatArea, formatCurrency, pricePerSquareMeter } from '../../shared/format'
 import { useToast } from '../../shared/ui/toast/ToastContext'
@@ -43,7 +44,12 @@ export function CreateLandLotPanel({
     resolver: zodResolver(createLandLotSchema),
     defaultValues: EMPTY_FORM,
   })
-  const mutation = useMutation({ mutationFn: createLandLot })
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: createLandLot,
+    // The new lot belongs in "My lots" too
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_LOTS_KEY }),
+  })
   const price = useWatch({ control, name: 'price' })
   const perSquareMeter = pricePerSquareMeter(price, areaM2)
 

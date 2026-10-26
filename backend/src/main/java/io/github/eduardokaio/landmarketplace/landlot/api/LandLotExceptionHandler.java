@@ -3,6 +3,7 @@ package io.github.eduardokaio.landmarketplace.landlot.api;
 import java.net.URI;
 
 import io.github.eduardokaio.landmarketplace.landlot.domain.InvalidLandLotException;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotAccessDeniedException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotNotFoundException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotOverlapException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.SearchRadiusTooLargeException;
@@ -54,6 +55,15 @@ public class LandLotExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 		problem.setType(URI.create("/problems/land-lot-not-found"));
 		problem.setTitle("Land lot not found");
+		return problem;
+	}
+
+	@ExceptionHandler(LandLotAccessDeniedException.class)
+	ProblemDetail handleAccessDenied(LandLotAccessDeniedException ex, HttpServletRequest request) {
+		ApiExceptionHandler.logRejected(request, HttpStatus.FORBIDDEN, ex);
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+		problem.setType(URI.create("/problems/not-land-lot-owner"));
+		problem.setTitle("Not the owner of the land lot");
 		return problem;
 	}
 

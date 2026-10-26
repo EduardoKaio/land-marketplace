@@ -1,0 +1,136 @@
+.auth-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: #1f293366;
+}
+
+.auth-dialog {
+  width: min(24rem, 100%);
+  padding: 1rem 1.25rem 1.25rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2933;
+  box-shadow: 0 8px 30px #00000040;
+}
+
+.auth-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-dialog h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.auth-dialog__close {
+  border: none;
+  background: none;
+  color: #52606d;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.auth-dialog__reason {
+  margin: 0.5rem 0 0;
+  color: #52606d;
+  font-size: 0.875rem;
+}
+
+.auth-dialog__tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 0 1rem;
+  border-bottom: 1px solid #e3e7ec;
+}
+
+.auth-dialog__tabs button {
+  padding: 0.45rem 0.75rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #52606d;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.auth-dialog__tabs button[aria-selected='true'] {
+  border-bottom-color: #1565c0;
+  color: #1565c0;
+  font-weight: 600;
+}
+
+.auth-dialog__error {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: #fdecea;
+  color: #c62828;
+  font-size: 0.85rem;
+}
+
+.auth-dialog__submit {
+  width: 100%;
+  padding: 0.55rem 1rem;
+  border: 1px solid #1565c0;
+  border-radius: 4px;
+  background: #1565c0;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.auth-dialog__submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.field__hint {
+  margin: 0;
+  color: #52606d;
+  font-size: 0.75rem;
+}
+
+.account-bar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  border: 1px solid #c9ced6;
+  border-radius: 6px;
+  background: #ffffffe6;
+  color: #1f2933;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 4px #0000002e;
+}
+
+.account-bar__name {
+  font-weight: 600;
+}
+
+.account-bar button {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #c9ced6;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #1f2933;
+  font: inherit;
+  cursor: pointer;
+}
+
+.account-bar button.account-bar__primary {
+  border-color: #1565c0;
+  background: #1565c0;
+  color: #ffffff;
+}

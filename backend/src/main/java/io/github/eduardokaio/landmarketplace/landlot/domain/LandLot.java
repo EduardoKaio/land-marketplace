@@ -69,23 +69,60 @@ public class LandLot {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	// The account id, not a @ManyToOne to the auth entity: the land lot feature only needs to compare
+	// ids, and the foreign key in the database already guarantees the account exists. Null for lots
+	// created before accounts existed, which nobody can edit.
+	@Column(name = "owner_id", updatable = false)
+	private UUID ownerId;
+
 	protected LandLot() {
 		// required by JPA
 	}
 
-	private LandLot(String title, String description, BigDecimal price, Contact contact, Polygon geom) {
+	private LandLot(String title, String description, BigDecimal price, Contact contact, Polygon geom,
+			UUID ownerId) {
 		this.title = title;
 		this.description = description;
 		this.price = price;
 		this.contact = contact;
 		this.geom = geom;
+		this.ownerId = ownerId;
 		this.status = LandLotStatus.AVAILABLE;
 	}
 
 	public static LandLot create(String title, String description, BigDecimal price, Contact contact,
-			Polygon geom) {
+			Polygon geom, UUID ownerId) {
+		if (ownerId == null) {
+			throw new IllegalArgumentException("A new land lot needs an owner");
+		}
 		return new LandLot(requireTitle(title), requireDescription(description), requirePrice(price),
-				requireContact(contact), requireGeometry(geom));
+				requireContact(contact), requireGeometry(geom), ownerId);
+	}
+
+	/**
+	 * Replaces the listing details. The geometry is not editable: it is the registered shape of the
+	 * lot, and changing it would mean checking overlaps again. To fix a shape, delete and create.
+	 */
+	public void update(String title, String description, BigDecimal price, Contact contact,
+			LandLotStatus status) {
+		// Everything is checked before anything is assigned, so a rejected update changes nothing
+		String validTitle = requireTitle(title);
+		String validDescription = requireDescription(description);
+		BigDecimal validPrice = requirePrice(price);
+		Contact validContact = requireContact(contact);
+		if (status == null) {
+			throw new InvalidLandLotException("Status is required");
+		}
+		this.title = validTitle;
+		this.description = validDescription;
+		this.price = validPrice;
+		this.contact = validContact;
+		this.status = status;
+	}
+
+	/** False for every account when the lot has no owner. */
+	public boolean isOwnedBy(UUID accountId) {
+		return ownerId != null && ownerId.equals(accountId);
 	}
 
 	/**
@@ -189,6 +226,10 @@ public class LandLot {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public UUID getOwnerId() {
+		return ownerId;
 	}
 
 }

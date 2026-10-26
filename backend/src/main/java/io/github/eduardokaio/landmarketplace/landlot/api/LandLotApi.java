@@ -9,16 +9,18 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
  * OpenAPI documentation of the land lot endpoints. Kept apart from LandLotController so the
  * controller stays short; springdoc reads the annotations from the interface.
  */
-@Tag(name = "Land lots", description = "Register, list and search land lots")
+@Tag(name = "Land lots", description = "Register, list, search, update and delete land lots")
 interface LandLotApi {
 
 	String JSON = "application/json";
@@ -26,9 +28,10 @@ interface LandLotApi {
 	String PROBLEM_JSON = "application/problem+json";
 
 	@Operation(summary = "Register a land lot",
-			description = "Creates a lot from its polygon and details. The polygon must be valid and must not "
-					+ "overlap the area of an existing lot; sharing a border or a vertex is allowed. "
-					+ "Coordinates are rounded to 7 decimals.")
+			description = "Creates a lot from its polygon and details, owned by the logged in account. The polygon "
+					+ "must be valid and must not overlap the area of an existing lot; sharing a border or a vertex "
+					+ "is allowed. Coordinates are rounded to 7 decimals.")
+	@SecurityRequirement(name = "bearer")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(mediaType = JSON,
 			examples = @ExampleObject(name = "Lot near Ponta Negra", value = LandLotApiExamples.CREATE_REQUEST)))
 	@ApiResponse(responseCode = "201", description = "Lot created",
@@ -46,7 +49,9 @@ interface LandLotApi {
 			description = "The geometry is not a valid polygon (wrong type, open ring, self-intersection...)",
 			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class),
 					examples = @ExampleObject(value = LandLotApiExamples.INVALID_GEOMETRY_PROBLEM)))
-	ResponseEntity<LandLotFeature> create(CreateLandLotRequest request);
+	@ApiResponse(responseCode = "401", description = "No access token, or an invalid or expired one",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	ResponseEntity<LandLotFeature> create(CreateLandLotRequest request, @Parameter(hidden = true) Jwt jwt);
 
 	@Operation(summary = "List the lots in the visible map area",
 			description = "Returns the lots whose bounding box intersects the given rectangle, largest first, up to "
@@ -85,5 +90,33 @@ interface LandLotApi {
 			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class),
 					examples = @ExampleObject(value = LandLotApiExamples.NOT_FOUND_PROBLEM)))
 	LandLotFeature findById(@Parameter(description = "Lot id", example = "3f0c2a8e-5b1d-4c7a-9e2f-1a6b8d4c0e93") UUID id);
+
+	@Operation(summary = "Update a land lot",
+			description = "Replaces the details of a lot: title, price, description, contact and status. The "
+					+ "geometry cannot change. Only the owner can do it.")
+	@SecurityRequirement(name = "bearer")
+	@ApiResponse(responseCode = "200", description = "The updated lot",
+			content = @Content(mediaType = JSON, schema = @Schema(implementation = LandLotFeature.class)))
+	@ApiResponse(responseCode = "400", description = "Missing or invalid fields",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "401", description = "No access token, or an invalid or expired one",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "403", description = "The lot belongs to another account",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "404", description = "No lot with this id",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	LandLotFeature update(@Parameter(description = "Lot id") UUID id, UpdateLandLotRequest request,
+			@Parameter(hidden = true) Jwt jwt);
+
+	@Operation(summary = "Delete a land lot", description = "Only the owner can do it.")
+	@SecurityRequirement(name = "bearer")
+	@ApiResponse(responseCode = "204", description = "Deleted")
+	@ApiResponse(responseCode = "401", description = "No access token, or an invalid or expired one",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "403", description = "The lot belongs to another account",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	@ApiResponse(responseCode = "404", description = "No lot with this id",
+			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class)))
+	void delete(@Parameter(description = "Lot id") UUID id, @Parameter(hidden = true) Jwt jwt);
 
 }

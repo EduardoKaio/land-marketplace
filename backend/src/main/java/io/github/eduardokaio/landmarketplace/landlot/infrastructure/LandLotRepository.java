@@ -64,4 +64,7 @@ public interface LandLotRepository extends JpaRepository<LandLot, UUID> {
 	List<LandLot> findInBoundingBox(@Param("minLon") double minLon, @Param("minLat") double minLat,
 			@Param("maxLon") double maxLon, @Param("maxLat") double maxLat, @Param("limit") int limit);
 
+	/** Derived query; served by the land_lot_owner_id_idx index. */
+	List<LandLot> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
+
 }

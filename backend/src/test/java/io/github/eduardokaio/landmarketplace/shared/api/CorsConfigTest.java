@@ -2,6 +2,7 @@ package io.github.eduardokaio.landmarketplace.shared.api;
 
 import java.util.List;
 
+import io.github.eduardokaio.landmarketplace.auth.infrastructure.SecurityConfig;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotController;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotGeoJsonAssembler;
 import io.github.eduardokaio.landmarketplace.landlot.application.LandLotQueryService;
@@ -29,7 +30,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(LandLotController.class)
-@Import({ GeoConfig.class, GeoJsonGeometryMapper.class, LandLotGeoJsonAssembler.class })
+// The slice does not pick up @Configuration classes, and without SecurityConfig Spring Boot's
+// default security (everything authenticated) would apply
+@Import({ SecurityConfig.class, GeoConfig.class, GeoJsonGeometryMapper.class, LandLotGeoJsonAssembler.class })
 class CorsConfigTest {
 
 	private static final String DEV_ORIGIN = "http://localhost:5173";
@@ -57,8 +60,27 @@ class CorsConfigTest {
 	}
 
 	@Test
+	void allowsTheMethodsOfTheOwnerActions() throws Exception {
+		preflight(DEV_ORIGIN, "PUT").andExpect(status().isOk());
+		preflight(DEV_ORIGIN, "DELETE").andExpect(status().isOk());
+	}
+
+	// The frontend sends its token in this header, which is not one browsers allow by default
+	@Test
+	void allowsTheAuthorizationHeader() throws Exception {
+		preflight(DEV_ORIGIN, "DELETE").andExpect(status().isOk());
+		mockMvc
+			.perform(options("/api/land-lots/{id}", "3f0c2a8e-5b1d-4c7a-9e2f-1a6b8d4c0e93")
+				.header(HttpHeaders.ORIGIN, DEV_ORIGIN)
+				.header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "DELETE")
+				.header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization"))
+			.andExpect(status().isOk())
+			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, containsString("authorization")));
+	}
+
+	@Test
 	void rejectsMethodsTheApiDoesNotHave() throws Exception {
-		preflight(DEV_ORIGIN, "DELETE").andExpect(status().isForbidden());
+		preflight(DEV_ORIGIN, "PATCH").andExpect(status().isForbidden());
 	}
 
 	// Without the exposed header the frontend could not read the URL of a created lot

@@ -2,7 +2,14 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import { ApiError } from './http'
-import { createLandLot, getLandLot, listLandLotsInBbox, searchLandLots } from './landLots'
+import {
+  createLandLot,
+  deleteLandLot,
+  getLandLot,
+  listLandLotsInBbox,
+  listMyLandLots,
+  searchLandLots,
+} from './landLots'
 import type { CreateLandLotRequest, LandLotFeature, LandLotFeatureCollection } from './types'
 
 const SQUARE = {
@@ -192,5 +199,24 @@ describe('land lot API client', () => {
     await getLandLot('a/b')
 
     expect(path).toBe('/api/land-lots/a%2Fb')
+  })
+
+  it('lists the lots of the logged in account', async () => {
+    server.use(http.get('*/api/me/land-lots', () => HttpResponse.json(COLLECTION)))
+
+    await expect(listMyLandLots()).resolves.toEqual(COLLECTION)
+  })
+
+  it('deletes a lot by id', async () => {
+    let deletedPath = ''
+    server.use(
+      http.delete('*/api/land-lots/:id', ({ request }) => {
+        deletedPath = new URL(request.url).pathname
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await expect(deleteLandLot(FEATURE.id)).resolves.toBeUndefined()
+    expect(deletedPath).toBe(`/api/land-lots/${FEATURE.id}`)
   })
 })

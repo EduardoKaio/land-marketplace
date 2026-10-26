@@ -3,6 +3,7 @@ package io.github.eduardokaio.landmarketplace.landlot.api;
 import java.net.URI;
 import java.util.UUID;
 
+import io.github.eduardokaio.landmarketplace.auth.api.CurrentUser;
 import io.github.eduardokaio.landmarketplace.landlot.application.LandLotQueryService;
 import io.github.eduardokaio.landmarketplace.landlot.application.LandLotService;
 import io.github.eduardokaio.landmarketplace.landlot.application.LandLotSlice;
@@ -11,13 +12,19 @@ import io.github.eduardokaio.landmarketplace.shared.geo.BoundingBox;
 import io.github.eduardokaio.landmarketplace.shared.geo.GeoJsonGeometryMapper;
 import jakarta.validation.Valid;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -43,9 +50,10 @@ public class LandLotController implements LandLotApi {
 
 	@Override
 	@PostMapping
-	public ResponseEntity<LandLotFeature> create(@Valid @RequestBody CreateLandLotRequest request) {
+	public ResponseEntity<LandLotFeature> create(@Valid @RequestBody CreateLandLotRequest request,
+			@AuthenticationPrincipal Jwt jwt) {
 		Polygon polygon = geometryMapper.toPolygon(request.geometry());
-		LandLot lot = service.create(request.toCommand(polygon));
+		LandLot lot = service.create(request.toCommand(polygon), CurrentUser.idOf(jwt));
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
 			.path("/{id}")
 			.buildAndExpand(lot.getId())
@@ -72,6 +80,20 @@ public class LandLotController implements LandLotApi {
 	@GetMapping("/{id}")
 	public LandLotFeature findById(@PathVariable UUID id) {
 		return assembler.toFeature(queryService.getById(id));
+	}
+
+	@Override
+	@PutMapping("/{id}")
+	public LandLotFeature update(@PathVariable UUID id, @Valid @RequestBody UpdateLandLotRequest request,
+			@AuthenticationPrincipal Jwt jwt) {
+		return assembler.toFeature(service.update(id, request.toCommand(), CurrentUser.idOf(jwt)));
+	}
+
+	@Override
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+		service.delete(id, CurrentUser.idOf(jwt));
 	}
 
 }

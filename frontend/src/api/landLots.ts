@@ -30,6 +30,16 @@ export function searchLandLots(
   return requestJson(`${LAND_LOTS}/search`, { query: { lon, lat, radius }, signal })
 }
 
+/** Lots of the logged in account, newest first. Needs a token. */
+export function listMyLandLots(signal?: AbortSignal): Promise<LandLotFeatureCollection> {
+  return requestJson('/api/me/land-lots', { signal })
+}
+
+/** Only the owner can delete; others get ApiError 403. */
+export function deleteLandLot(id: string): Promise<void> {
+  return requestJson(`${LAND_LOTS}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export function getLandLot(id: string, signal?: AbortSignal): Promise<LandLotFeature> {
   return requestJson(`${LAND_LOTS}/${encodeURIComponent(id)}`, { signal })
 }

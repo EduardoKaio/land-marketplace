@@ -4,7 +4,7 @@ export interface MapModeState {
   mode: MapMode
 }
 
-export type MapModeAction = { type: 'select'; mode: MapMode }
+export type MapModeAction = { type: 'select'; mode: MapMode } | { type: 'logged-out' }
 
 export const initialMapModeState: MapModeState = { mode: 'explore' }
 
@@ -16,5 +16,8 @@ export function mapModeReducer(state: MapModeState, action: MapModeAction): MapM
   switch (action.type) {
     case 'select':
       return { mode: state.mode === action.mode ? 'explore' : action.mode }
+    // Drawing a lot needs an account; searching does not
+    case 'logged-out':
+      return state.mode === 'draw-lot' ? { mode: 'explore' } : state
   }
 }

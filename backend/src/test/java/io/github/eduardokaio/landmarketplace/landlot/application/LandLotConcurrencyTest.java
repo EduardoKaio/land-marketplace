@@ -3,6 +3,7 @@ package io.github.eduardokaio.landmarketplace.landlot.application;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -10,6 +11,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
+import io.github.eduardokaio.landmarketplace.auth.AccountFixtures;
+import io.github.eduardokaio.landmarketplace.auth.infrastructure.AppUserRepository;
 import io.github.eduardokaio.landmarketplace.landlot.LandLotFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotOverlapException;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
@@ -39,17 +42,26 @@ class LandLotConcurrencyTest {
 	@Autowired
 	private LandLotRepository repository;
 
+	@Autowired
+	private AppUserRepository accounts;
+
 	private final ExecutorService executor = Executors.newFixedThreadPool(THREADS);
+
+	private UUID ownerId;
 
 	@BeforeEach
 	void cleanDatabase() {
+		// Lots first: they reference their owners
 		repository.deleteAll();
+		accounts.deleteAll();
+		ownerId = accounts.save(AccountFixtures.account("owner@example.com")).getId();
 	}
 
 	@AfterEach
 	void shutdown() {
 		executor.shutdownNow();
 		repository.deleteAll();
+		accounts.deleteAll();
 	}
 
 	@Test
@@ -62,7 +74,7 @@ class LandLotConcurrencyTest {
 			results.add(executor.submit(() -> {
 				start.await();
 				try {
-					service.create(command);
+					service.create(command, ownerId);
 					return true;
 				}
 				catch (LandLotOverlapException ex) {

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +30,8 @@ class DemoDataMigrationTest {
 	private static final UUID PONTA_NEGRA_WEST = UUID.fromString("a0000000-0000-4000-8000-000000000001");
 
 	private static final UUID PONTA_NEGRA_EAST = UUID.fromString("a0000000-0000-4000-8000-000000000002");
+
+	private static final UUID DEMO_ACCOUNT = UUID.fromString("b0000000-0000-4000-8000-000000000001");
 
 	@Autowired
 	private LandLotRepository repository;
@@ -78,6 +81,21 @@ class DemoDataMigrationTest {
 		List<LandLotStatus> statuses = repository.findAll().stream().map(LandLot::getStatus).toList();
 
 		assertThat(statuses).containsOnlyOnce(LandLotStatus.SOLD);
+	}
+
+	@Test
+	void everySampleLotBelongsToTheDemoAccount() {
+		assertThat(repository.findAll()).allSatisfy(lot -> assertThat(lot.getOwnerId()).isEqualTo(DEMO_ACCOUNT));
+	}
+
+	// The README promises this password; a wrong hash in the seed would fail only at login time
+	@Test
+	void demoAccountPasswordIsTheDocumentedOne() {
+		String hash = (String) entityManager
+			.createNativeQuery("SELECT password_hash FROM app_user WHERE email = 'demo@example.com'")
+			.getSingleResult();
+
+		assertThat(new BCryptPasswordEncoder().matches("demo1234", hash)).isTrue();
 	}
 
 }
