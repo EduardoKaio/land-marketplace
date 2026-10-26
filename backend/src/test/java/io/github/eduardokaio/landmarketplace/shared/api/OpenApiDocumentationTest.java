@@ -56,10 +56,13 @@ class OpenApiDocumentationTest {
 
 	@Test
 	void documentsReadEndpoints() throws Exception {
-		apiDocs().andExpect(jsonPath(LOTS + ".get.parameters[*].name", containsInAnyOrder("bbox")))
+		// Exactly these: the validation-only getters of LandLotFilterRequest must not become parameters
+		apiDocs().andExpect(jsonPath(LOTS + ".get.parameters[*].name", containsInAnyOrder("bbox", "minPrice",
+				"maxPrice", "minArea", "maxArea", "maxPricePerSquareMeter", "status")))
 			.andExpect(jsonPath(LOTS + ".get.responses['400']" + PROBLEM).exists())
 			.andExpect(jsonPath("$.paths['/api/land-lots/search'].get.parameters[*].name",
-					containsInAnyOrder("lon", "lat", "radius")))
+					containsInAnyOrder("lon", "lat", "radius", "minPrice", "maxPrice", "minArea", "maxArea",
+							"maxPricePerSquareMeter", "status")))
 			.andExpect(jsonPath(BY_ID + ".get.responses['400']" + PROBLEM).exists())
 			.andExpect(jsonPath(BY_ID + ".get.responses['404']" + PROBLEM + ".example.status").value(404))
 			.andExpect(jsonPath("$.paths['/api/land-lots/search'].get.responses['400']" + PROBLEM

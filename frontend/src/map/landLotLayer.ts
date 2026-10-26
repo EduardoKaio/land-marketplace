@@ -7,7 +7,12 @@ import { transformExtent, type ProjectionLike } from 'ol/proj'
 import VectorSource from 'ol/source/Vector'
 import type { Extent } from 'ol/extent'
 import { listLandLotsInBbox } from '../api/landLots'
-import type { BoundingBox, LandLotFeature, LandLotFeatureCollection } from '../api/types'
+import type {
+  BoundingBox,
+  LandLotFeature,
+  LandLotFeatureCollection,
+  LandLotFilters,
+} from '../api/types'
 import { CONFLICT_PROPERTY, landLotStyle } from './landLotStyle'
 
 export type LandLotSource = VectorSource<Feature<Polygon>>
@@ -50,11 +55,15 @@ export function lotExtent(lot: LandLotFeature): Extent {
   return readLandLotFeatures(lot)[0].getGeometry()!.getExtent()
 }
 
+/** Property of the source holding the filters its loader sends; see applyFilters. */
+const FILTERS_PROPERTY = 'filters'
+
 /**
  * Lots loaded for the visible area: the bbox strategy calls the loader with the extent of each
- * new view, and the source skips extents it already loaded.
+ * new view, and the source skips extents it already loaded. The loader reads the filters from the
+ * source on every load, so a reload after applyFilters uses the new ones.
  */
-export function createLandLotSource(): LandLotSource {
+export function createLandLotSource(filters: LandLotFilters = {}): LandLotSource {
   const source: LandLotSource = new VectorSource({
     strategy: bboxStrategy,
     loader: (extent, _resolution, projection, success, failure) => {
@@ -63,8 +72,15 @@ export function createLandLotSource(): LandLotSource {
         success?.([])
         return
       }
-      listLandLotsInBbox(bbox)
+      const filters = source.get(FILTERS_PROPERTY) as LandLotFilters
+      listLandLotsInBbox(bbox, filters)
         .then((collection) => {
+          // The filters changed while this answer was on its way: refresh() already emptied the
+          // source and asked again with the new ones, so these lots would come back unfiltered
+          if (source.get(FILTERS_PROPERTY) !== filters) {
+            success?.([])
+            return
+          }
           // Lots with an id already in the source are skipped, so overlapping boxes add no duplicates
           const features = readLandLotFeatures(collection)
           source.addFeatures(features)
@@ -81,11 +97,25 @@ export function createLandLotSource(): LandLotSource {
         })
     },
   })
+  source.set(FILTERS_PROPERTY, filters)
   return source
 }
 
-export function createLandLotLayer(): LandLotLayer {
-  return new VectorLayer({ source: createLandLotSource(), style: landLotStyle })
+/**
+ * Lists only the lots that match the filters from now on. refresh() drops the loaded lots and the
+ * areas marked as loaded, and OpenLayers loads the visible area again with the new filters. Does
+ * nothing for the filters already applied, so calling it on every render is cheap.
+ */
+export function applyFilters(source: LandLotSource, filters: LandLotFilters): void {
+  if (source.get(FILTERS_PROPERTY) === filters) {
+    return
+  }
+  source.set(FILTERS_PROPERTY, filters)
+  source.refresh()
+}
+
+export function createLandLotLayer(filters?: LandLotFilters): LandLotLayer {
+  return new VectorLayer({ source: createLandLotSource(filters), style: landLotStyle })
 }
 
 /** Marks the given lots as conflicting (drawn in red), clearing any previous marks. */

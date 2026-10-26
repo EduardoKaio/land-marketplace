@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { server } from '../test/server'
 import { landLotFeature } from '../test/fixtures'
 import {
+  applyFilters,
   clearConflicts,
   createLandLotLayer,
   createLandLotSource,
@@ -163,6 +164,93 @@ describe('conflict highlight', () => {
     clearConflicts(source)
 
     expect(changed).not.toHaveBeenCalled()
+  })
+})
+
+describe('filters of the land lot source', () => {
+  function captureParams(): URLSearchParams[] {
+    const received: URLSearchParams[] = []
+    server.use(
+      http.get('*/api/land-lots', ({ request }) => {
+        received.push(new URL(request.url).searchParams)
+        return HttpResponse.json({
+          type: 'FeatureCollection',
+          features: [landLotFeature()],
+          truncated: false,
+        })
+      }),
+    )
+    return received
+  }
+
+  it('sends the filters it was created with', async () => {
+    const received = captureParams()
+    const source = createLandLotSource({ status: 'SOLD' })
+
+    load(source)
+
+    await vi.waitFor(() => expect(received).toHaveLength(1))
+    expect(received[0].get('status')).toBe('SOLD')
+  })
+
+  it('drops the loaded lots and loads the area again with new filters', async () => {
+    const received = captureParams()
+    const source = createLandLotSource()
+    load(source)
+    await vi.waitFor(() => expect(source.getFeatures()).toHaveLength(1))
+
+    applyFilters(source, { maxPrice: 100 })
+
+    expect(source.getFeatures()).toHaveLength(0)
+    // OpenLayers loads the visible area again on the next render; here the test asks for it
+    load(source)
+    await vi.waitFor(() => expect(received).toHaveLength(2))
+    expect(received[1].get('maxPrice')).toBe('100')
+  })
+
+  it('keeps the loaded lots when the same filters are applied again', async () => {
+    const filters = { minArea: 100 }
+    const received = captureParams()
+    const source = createLandLotSource(filters)
+    load(source)
+    await vi.waitFor(() => expect(source.getFeatures()).toHaveLength(1))
+
+    applyFilters(source, filters)
+    load(source)
+
+    expect(source.getFeatures()).toHaveLength(1)
+    expect(received).toHaveLength(1)
+  })
+
+  // Otherwise an unfiltered answer arriving late would put back the lots the filter removed
+  it('ignores an answer for filters that changed while it was loading', async () => {
+    let answer: (() => void) | null = null
+    server.use(
+      http.get(
+        '*/api/land-lots',
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = () =>
+              resolve(
+                HttpResponse.json({
+                  type: 'FeatureCollection',
+                  features: [landLotFeature()],
+                  truncated: false,
+                }),
+              )
+          }),
+        { once: true },
+      ),
+    )
+    const source = createLandLotSource()
+    load(source)
+    await vi.waitFor(() => expect(answer).not.toBeNull())
+
+    applyFilters(source, { status: 'SOLD' })
+    answer!()
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(source.getFeatures()).toHaveLength(0)
   })
 })
 

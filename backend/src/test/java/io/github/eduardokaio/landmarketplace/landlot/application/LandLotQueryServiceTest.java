@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import io.github.eduardokaio.landmarketplace.landlot.LandLotFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLot;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotFilter;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotStatus;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotNotFoundException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.SearchRadiusTooLargeException;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,6 +28,9 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LandLotQueryServiceTest {
+
+	// Passed through untouched: the filtering itself happens in SQL (LandLotRepositoryTest)
+	private static final LandLotFilter FILTER = new LandLotFilter(null, null, null, null, null, LandLotStatus.AVAILABLE);
 
 	private static final BoundingBox BOX = new BoundingBox(-35.21, -5.91, -35.19, -5.89);
 
@@ -46,33 +52,33 @@ class LandLotQueryServiceTest {
 
 	@Test
 	void searchPassesTheCircleToTheRepository() {
-		when(repository.findWithinDistance(-35.2, -5.9, 1000)).thenReturn(List.of(first));
+		when(repository.findWithinDistance(-35.2, -5.9, 1000, FILTER)).thenReturn(List.of(first));
 
-		assertThat(service.search(-35.2, -5.9, 1000)).containsExactly(first);
+		assertThat(service.search(-35.2, -5.9, 1000, FILTER)).containsExactly(first);
 	}
 
 	@Test
 	void searchAcceptsRadiusEqualToTheMaximum() {
-		when(repository.findWithinDistance(-35.2, -5.9, 50_000)).thenReturn(List.of());
+		when(repository.findWithinDistance(-35.2, -5.9, 50_000, FILTER)).thenReturn(List.of());
 
-		assertThat(service.search(-35.2, -5.9, 50_000)).isEmpty();
+		assertThat(service.search(-35.2, -5.9, 50_000, FILTER)).isEmpty();
 	}
 
 	@Test
 	void searchRejectsRadiusAboveTheMaximumWithoutQuerying() {
-		assertThatThrownBy(() -> service.search(-35.2, -5.9, 50_000.1))
+		assertThatThrownBy(() -> service.search(-35.2, -5.9, 50_000.1, FILTER))
 			.isInstanceOf(SearchRadiusTooLargeException.class)
 			.hasMessage("The search radius must be at most 50000 meters.")
 			.extracting("maxRadiusMeters")
 			.isEqualTo(50_000.0);
-		verify(repository, never()).findWithinDistance(anyDouble(), anyDouble(), anyDouble());
+		verify(repository, never()).findWithinDistance(anyDouble(), anyDouble(), anyDouble(), any());
 	}
 
 	@Test
 	void bboxAsksForOneRowMoreThanTheCapAndFlagsTruncation() {
-		when(repository.findInBoundingBox(-35.21, -5.91, -35.19, -5.89, 3)).thenReturn(List.of(first, second, third));
+		when(repository.findInBoundingBox(-35.21, -5.91, -35.19, -5.89, FILTER, 3)).thenReturn(List.of(first, second, third));
 
-		LandLotSlice slice = service.findInBoundingBox(BOX);
+		LandLotSlice slice = service.findInBoundingBox(BOX, FILTER);
 
 		assertThat(slice.lots()).containsExactly(first, second);
 		assertThat(slice.truncated()).isTrue();
@@ -80,9 +86,9 @@ class LandLotQueryServiceTest {
 
 	@Test
 	void bboxIsNotTruncatedWhenEverythingFits() {
-		when(repository.findInBoundingBox(-35.21, -5.91, -35.19, -5.89, 3)).thenReturn(List.of(first, second));
+		when(repository.findInBoundingBox(-35.21, -5.91, -35.19, -5.89, FILTER, 3)).thenReturn(List.of(first, second));
 
-		LandLotSlice slice = service.findInBoundingBox(BOX);
+		LandLotSlice slice = service.findInBoundingBox(BOX, FILTER);
 
 		assertThat(slice.lots()).containsExactly(first, second);
 		assertThat(slice.truncated()).isFalse();

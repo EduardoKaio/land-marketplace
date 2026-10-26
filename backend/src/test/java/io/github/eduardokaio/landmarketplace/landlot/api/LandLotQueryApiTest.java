@@ -8,6 +8,7 @@ import io.github.eduardokaio.landmarketplace.auth.AccountFixtures;
 import io.github.eduardokaio.landmarketplace.auth.infrastructure.AppUserRepository;
 import io.github.eduardokaio.landmarketplace.landlot.LandLotFixtures;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLot;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotStatus;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -223,6 +224,71 @@ class LandLotQueryApiTest {
 		mockMvc.perform(get("/api/land-lots/{id}", "not-a-uuid"))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+	}
+
+	@Test
+	void listingAppliesTheFilters() throws Exception {
+		String cheap = save(0, 0, 1, 1);
+		String sold = saveSold(5, 0, 6, 1);
+
+		mockMvc.perform(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8").param("status", "SOLD"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.features[*].id", containsInAnyOrder(sold)));
+		mockMvc
+			.perform(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8")
+				.param("maxPrice", "100000")
+				.param("status", "AVAILABLE"))
+			.andExpect(jsonPath("$.features[*].id", containsInAnyOrder(cheap)));
+	}
+
+	@Test
+	void searchAppliesTheFilters() throws Exception {
+		save(0, 0, 1, 1);
+		String sold = saveSold(2, 0, 3, 1);
+
+		mockMvc.perform(get("/api/land-lots/search").param("lon", String.valueOf(CENTER_LON))
+			.param("lat", String.valueOf(CENTER_LAT))
+			.param("radius", "1000")
+			.param("status", "SOLD")).andExpect(jsonPath("$.features[*].id", containsInAnyOrder(sold)));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "/api/land-lots?bbox=-35.3,-6.0,-35.1,-5.8",
+			"/api/land-lots/search?lon=-35.2&lat=-5.9&radius=1000" })
+	void rejectsAMinimumAboveTheMaximum(String url) throws Exception {
+		expectValidationError(get(url).param("minPrice", "500").param("maxPrice", "100"), "priceRangeOrdered");
+		expectValidationError(get(url).param("minArea", "500").param("maxArea", "100"), "areaRangeOrdered");
+	}
+
+	@Test
+	void acceptsEqualMinimumAndMaximum() throws Exception {
+		mockMvc.perform(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8")
+			.param("minPrice", "100000")
+			.param("maxPrice", "100000")).andExpect(status().isOk());
+	}
+
+	@Test
+	void rejectsNegativeBounds() throws Exception {
+		expectValidationError(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8").param("minArea", "-1"),
+				"minArea");
+		expectValidationError(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8")
+			.param("maxPricePerSquareMeter", "-0.01"), "maxPricePerSquareMeter");
+	}
+
+	@Test
+	void rejectsAnUnknownStatusWithoutEchoingInternals() throws Exception {
+		mockMvc.perform(get("/api/land-lots").param("bbox", "-35.3,-6.0,-35.1,-5.8").param("status", "RESERVED"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errors[0].field").value("status"))
+			.andExpect(jsonPath("$.errors[0].message").value("has an invalid value"));
+	}
+
+	private String saveSold(int x1, int y1, int x2, int y2) {
+		String id = save(x1, y1, x2, y2);
+		LandLot lot = repository.findById(UUID.fromString(id)).orElseThrow();
+		lot.update(lot.getTitle(), lot.getDescription(), lot.getPrice(), lot.getContact(), LandLotStatus.SOLD);
+		repository.saveAndFlush(lot);
+		return id;
 	}
 
 	private ResultActions search(String radius) throws Exception {

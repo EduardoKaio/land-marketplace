@@ -61,19 +61,24 @@ public class LandLotController implements LandLotApi {
 		return ResponseEntity.created(location).body(assembler.toFeature(lot));
 	}
 
-	/** Lots in the visible map area, given as bbox=minLon,minLat,maxLon,maxLat. */
+	/** Lots in the visible map area, given as bbox=minLon,minLat,maxLon,maxLat, optionally filtered. */
 	@Override
 	@GetMapping
-	public LandLotFeatureCollection findInBoundingBox(@RequestParam String bbox) {
-		LandLotSlice slice = queryService.findInBoundingBox(BoundingBox.parse(bbox));
+	public LandLotFeatureCollection findInBoundingBox(@RequestParam String bbox,
+			@Valid LandLotFilterRequest filter) {
+		LandLotSlice slice = queryService.findInBoundingBox(BoundingBox.parse(bbox), filter.toFilter());
 		return assembler.toCollection(slice.lots(), slice.truncated());
 	}
 
-	/** Lots intersecting the circle drawn by the user. */
+	/**
+	 * Lots intersecting the circle drawn by the user, optionally filtered. The circle and the
+	 * filters bind from the same query string into two objects, each validated on its own.
+	 */
 	@Override
 	@GetMapping("/search")
-	public LandLotFeatureCollection search(@Valid LandLotSearchRequest request) {
-		return assembler.toCollection(queryService.search(request.lon(), request.lat(), request.radius()));
+	public LandLotFeatureCollection search(@Valid LandLotSearchRequest request, @Valid LandLotFilterRequest filter) {
+		return assembler
+			.toCollection(queryService.search(request.lon(), request.lat(), request.radius(), filter.toFilter()));
 	}
 
 	@Override

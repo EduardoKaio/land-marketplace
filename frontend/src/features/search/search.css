@@ -34,3 +34,13 @@
   font: inherit;
   cursor: pointer;
 }
+
+.search-panel button.search-panel__link {
+  display: block;
+  margin-bottom: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1565c0;
+  text-decoration: underline;
+}

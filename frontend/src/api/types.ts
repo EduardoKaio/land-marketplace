@@ -91,6 +91,21 @@ export interface LoginRequest {
   password: string
 }
 
+/**
+ * Optional filters of the map listing and of the circle search. A missing field does not filter;
+ * every bound is inclusive.
+ */
+export interface LandLotFilters {
+  minPrice?: number
+  maxPrice?: number
+  /** Square meters. */
+  minArea?: number
+  maxArea?: number
+  /** Compared with the value rounded to cents, the one shown. */
+  maxPricePerSquareMeter?: number
+  status?: LandLotStatus
+}
+
 export interface FieldError {
   field: string
   message: string

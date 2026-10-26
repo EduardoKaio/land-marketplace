@@ -1,9 +1,11 @@
 import { useEffect, useReducer, useState } from 'react'
+import type { LandLotFilters } from '../../api/types'
 import { BaseLayerSwitcher } from '../../map/BaseLayerSwitcher'
 import { useLandLotLayer } from '../../map/useLandLotLayer'
 import { AccountBar } from '../auth/AccountBar'
 import { AuthDialog } from '../auth/AuthDialog'
 import { useAuth } from '../auth/AuthContext'
+import { FiltersPanel } from '../filters/FiltersPanel'
 import { DrawLotTool } from '../land-lots/DrawLotTool'
 import { LotPopup } from '../lot-popup/LotPopup'
 import { initialMapModeState, mapModeReducer, type MapMode } from '../map-mode/mapMode'
@@ -23,7 +25,9 @@ interface AuthPrompt {
  */
 export function MapWorkspace() {
   const [{ mode }, dispatch] = useReducer(mapModeReducer, initialMapModeState)
-  const lotLayer = useLandLotLayer()
+  // Shared by the map listing and the search, so one panel filters both
+  const [filters, setFilters] = useState<LandLotFilters>({})
+  const lotLayer = useLandLotLayer(filters)
   const { user, logout } = useAuth()
   const [authPrompt, setAuthPrompt] = useState<AuthPrompt | null>(null)
   const [myLotsOpen, setMyLotsOpen] = useState(false)
@@ -74,13 +78,16 @@ export function MapWorkspace() {
         }}
       />
       <BaseLayerSwitcher />
+      <FiltersPanel filters={filters} onChange={setFilters} />
       {/* No popup while drawing a lot: there a click adds a vertex */}
       {mode === 'explore' && <LotPopup layer={lotLayer} />}
       {mode === 'draw-lot' && user && <DrawLotTool lotSource={lotLayer.getSource()!} />}
       {mode === 'search' && (
         <SearchTool
           lotLayer={lotLayer}
+          filters={filters}
           onClear={() => dispatch({ type: 'select', mode: 'explore' })}
+          onClearFilters={() => setFilters({})}
         />
       )}
       {myLotsOpen && user && (

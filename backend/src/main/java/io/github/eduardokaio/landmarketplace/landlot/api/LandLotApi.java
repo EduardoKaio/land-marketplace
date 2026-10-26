@@ -55,29 +55,33 @@ interface LandLotApi {
 
 	@Operation(summary = "List the lots in the visible map area",
 			description = "Returns the lots whose bounding box intersects the given rectangle, largest first, up to "
-					+ "a configured maximum. \"truncated\" is true when more lots matched.")
+					+ "a configured maximum. \"truncated\" is true when more lots matched. The optional filters "
+					+ "narrow the result; every bound is inclusive.")
 	@ApiResponse(responseCode = "200", description = "Lots in the area",
 			content = @Content(mediaType = JSON, schema = @Schema(implementation = LandLotFeatureCollection.class),
 					examples = @ExampleObject(value = LandLotApiExamples.FEATURE_COLLECTION)))
-	@ApiResponse(responseCode = "400", description = "Missing or malformed bbox",
+	@ApiResponse(responseCode = "400", description = "Missing or malformed bbox, or invalid filters",
 			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class),
 					examples = @ExampleObject(value = LandLotApiExamples.BOUNDING_BOX_PROBLEM)))
 	LandLotFeatureCollection findInBoundingBox(@Parameter(
 			description = "minLon,minLat,maxLon,maxLat in degrees; must not cross the antimeridian",
-			example = "-35.21,-5.91,-35.19,-5.87") String bbox);
+			example = "-35.21,-5.91,-35.19,-5.87") String bbox, @ParameterObject LandLotFilterRequest filter);
 
 	@Operation(summary = "Search the lots that intersect a circle",
 			description = "Returns every lot with at least one point within the radius of the center, measured in "
-					+ "meters on the WGS84 spheroid.")
+					+ "meters on the WGS84 spheroid. The optional filters narrow the result; every bound is "
+					+ "inclusive.")
 	@ApiResponse(responseCode = "200", description = "Lots intersecting the circle",
 			content = @Content(mediaType = JSON, schema = @Schema(implementation = LandLotFeatureCollection.class),
 					examples = @ExampleObject(value = LandLotApiExamples.FEATURE_COLLECTION)))
-	@ApiResponse(responseCode = "400", description = "Missing or out of range parameters, or radius above the maximum",
+	@ApiResponse(responseCode = "400",
+			description = "Missing or out of range parameters, radius above the maximum, or invalid filters",
 			content = @Content(mediaType = PROBLEM_JSON, schema = @Schema(implementation = ProblemDetail.class),
 					examples = { @ExampleObject(name = "Invalid parameter", value = LandLotApiExamples.SEARCH_VALIDATION_PROBLEM),
 							@ExampleObject(name = "Radius too large",
 									value = LandLotApiExamples.RADIUS_TOO_LARGE_PROBLEM) }))
-	LandLotFeatureCollection search(@ParameterObject LandLotSearchRequest request);
+	LandLotFeatureCollection search(@ParameterObject LandLotSearchRequest request,
+			@ParameterObject LandLotFilterRequest filter);
 
 	@Operation(summary = "Get a land lot")
 	@ApiResponse(responseCode = "200", description = "The lot",

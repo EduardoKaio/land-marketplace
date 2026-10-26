@@ -11,6 +11,7 @@ import io.github.eduardokaio.landmarketplace.landlot.api.LandLotFeature;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotFeatureCollection;
 import io.github.eduardokaio.landmarketplace.landlot.api.LandLotGeoJsonAssembler;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLot;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotFilter;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotStatus;
 import io.github.eduardokaio.landmarketplace.shared.geo.GeoConfig;
 import io.github.eduardokaio.landmarketplace.shared.geo.GeoJsonGeometryMapper;
@@ -137,7 +138,7 @@ class LandLotRepositoryTest {
 		repository.flush();
 		entityManager.clear();
 
-		List<LandLot> found = repository.findInBoundingBox(-35.3, -6.0, -35.1, -5.8, 2);
+		List<LandLot> found = repository.findInBoundingBox(-35.3, -6.0, -35.1, -5.8, LandLotFilter.NONE, 2);
 
 		assertThat(found).extracting(LandLot::getId).containsExactly(large.getId(), medium.getId());
 		assertThat(found).extracting(LandLot::getId).doesNotContain(small.getId());
@@ -147,7 +148,7 @@ class LandLotRepositoryTest {
 	void boundingBoxQueryIgnoresLotsOutsideTheBox() {
 		repository.saveAndFlush(squareLot(0, 1));
 
-		assertThat(repository.findInBoundingBox(-35.0, -6.0, -34.9, -5.8, 10)).isEmpty();
+		assertThat(repository.findInBoundingBox(-35.0, -6.0, -34.9, -5.8, LandLotFilter.NONE, 10)).isEmpty();
 	}
 
 	@Test
@@ -155,8 +156,8 @@ class LandLotRepositoryTest {
 		LandLot lot = repository.saveAndFlush(squareLot(0, 1));
 
 		// The lot starts at -35.2 and the center is 0.001 degree (about 110 m) to the west
-		assertThat(repository.findWithinDistance(-35.201, -5.9, 100)).isEmpty();
-		assertThat(repository.findWithinDistance(-35.201, -5.9, 120)).extracting(LandLot::getId)
+		assertThat(repository.findWithinDistance(-35.201, -5.9, 100, LandLotFilter.NONE)).isEmpty();
+		assertThat(repository.findWithinDistance(-35.201, -5.9, 120, LandLotFilter.NONE)).extracting(LandLot::getId)
 			.containsExactly(lot.getId());
 	}
 

@@ -40,6 +40,14 @@ Start over with a clean database: `docker compose down -v && docker compose up -
 
 Every setting has a default in `docker-compose.yml`; `.env.example` lists them.
 
+## Filters
+
+The map listing (`GET /api/land-lots?bbox=...`) and the circle search (`GET /api/land-lots/search`)
+take the same optional filters: `minPrice`, `maxPrice`, `minArea`, `maxArea` (square meters),
+`maxPricePerSquareMeter` and `status` (`AVAILABLE` or `SOLD`). Bounds are inclusive, a minimum
+above its maximum is a 400, and the price per m² is compared rounded to cents, as it is shown. In
+the app, the Filters button applies them to the map and to the current search at once.
+
 ## Accounts and access
 
 Anyone can browse and search lots. Publishing needs an account: register or log in from the app

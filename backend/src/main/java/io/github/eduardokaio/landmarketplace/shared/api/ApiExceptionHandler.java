@@ -53,7 +53,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		List<FieldError> errors = ex.getBindingResult()
 			.getFieldErrors()
 			.stream()
-			.map(error -> new FieldError(error.getField(), error.getDefaultMessage()))
+			.map(error -> new FieldError(error.getField(), messageOf(error)))
 			.sorted(Comparator.comparing(FieldError::field).thenComparing(FieldError::message))
 			.toList();
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
@@ -62,6 +62,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		problem.setTitle("Invalid request");
 		problem.setProperty("errors", errors);
 		return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
+	}
+
+	/**
+	 * A value that could not even be converted (a word where a number or a status is expected) has
+	 * a default message naming internal classes and echoing the input; the client only needs to
+	 * know which field to fix.
+	 */
+	private static String messageOf(org.springframework.validation.FieldError error) {
+		return error.isBindingFailure() ? "has an invalid value" : error.getDefaultMessage();
 	}
 
 	/** Every standard Spring MVC error goes through here, so this is where they are logged. */

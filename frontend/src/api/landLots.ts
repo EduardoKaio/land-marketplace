@@ -5,6 +5,7 @@ import type {
   CreateLandLotRequest,
   LandLotFeature,
   LandLotFeatureCollection,
+  LandLotFilters,
 } from './types'
 
 const LAND_LOTS = '/api/land-lots'
@@ -14,20 +15,39 @@ export function createLandLot(request: CreateLandLotRequest): Promise<LandLotFea
   return requestJson(LAND_LOTS, { method: 'POST', body: request })
 }
 
+/** The filters as query parameters, leaving out the ones that are not set. */
+export function filterQuery(filters: LandLotFilters): Record<string, string | number> {
+  const query: Record<string, string | number> = {}
+  for (const [name, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== null && value !== '') {
+      query[name] = value
+    }
+  }
+  return query
+}
+
 /** Lots in the visible map area, largest first, capped by the server (see `truncated`). */
 export function listLandLotsInBbox(
   bbox: BoundingBox,
+  filters: LandLotFilters = {},
   signal?: AbortSignal,
 ): Promise<LandLotFeatureCollection> {
-  return requestJson(LAND_LOTS, { query: { bbox: bbox.join(',') }, signal })
+  return requestJson(LAND_LOTS, {
+    query: { bbox: bbox.join(','), ...filterQuery(filters) },
+    signal,
+  })
 }
 
 /** Lots that intersect the circle. */
 export function searchLandLots(
   { lon, lat, radius }: CircleSearch,
+  filters: LandLotFilters = {},
   signal?: AbortSignal,
 ): Promise<LandLotFeatureCollection> {
-  return requestJson(`${LAND_LOTS}/search`, { query: { lon, lat, radius }, signal })
+  return requestJson(`${LAND_LOTS}/search`, {
+    query: { lon, lat, radius, ...filterQuery(filters) },
+    signal,
+  })
 }
 
 /** Lots of the logged in account, newest first. Needs a token. */

@@ -86,7 +86,7 @@ class CorsConfigTest {
 	// Without the exposed header the frontend could not read the URL of a created lot
 	@Test
 	void exposesTheLocationHeaderToTheFrontend() throws Exception {
-		given(queryService.findInBoundingBox(any())).willReturn(new LandLotSlice(List.of(), false));
+		given(queryService.findInBoundingBox(any(), any())).willReturn(new LandLotSlice(List.of(), false));
 
 		mockMvc
 			.perform(get("/api/land-lots").param("bbox", "-35.21,-5.91,-35.19,-5.89")

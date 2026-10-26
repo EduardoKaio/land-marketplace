@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLot;
+import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotFilter;
 import io.github.eduardokaio.landmarketplace.landlot.domain.LandLotNotFoundException;
 import io.github.eduardokaio.landmarketplace.landlot.domain.SearchRadiusTooLargeException;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
@@ -28,18 +29,18 @@ public class LandLotQueryService {
 		this.properties = properties;
 	}
 
-	public List<LandLot> search(double lon, double lat, double radiusMeters) {
+	public List<LandLot> search(double lon, double lat, double radiusMeters, LandLotFilter filter) {
 		if (radiusMeters > properties.maxSearchRadiusMeters()) {
 			throw new SearchRadiusTooLargeException(properties.maxSearchRadiusMeters());
 		}
-		return repository.findWithinDistance(lon, lat, radiusMeters);
+		return repository.findWithinDistance(lon, lat, radiusMeters, filter);
 	}
 
-	public LandLotSlice findInBoundingBox(BoundingBox box) {
+	public LandLotSlice findInBoundingBox(BoundingBox box, LandLotFilter filter) {
 		int max = properties.maxBboxResults();
 		// One extra row tells whether the cap cut anything off, without a separate COUNT query
 		List<LandLot> lots = repository.findInBoundingBox(box.minLon(), box.minLat(), box.maxLon(), box.maxLat(),
-				max + 1);
+				filter, max + 1);
 		boolean truncated = lots.size() > max;
 		return new LandLotSlice(truncated ? lots.subList(0, max) : lots, truncated);
 	}

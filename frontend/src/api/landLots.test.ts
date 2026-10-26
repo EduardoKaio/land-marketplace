@@ -5,6 +5,7 @@ import { ApiError } from './http'
 import {
   createLandLot,
   deleteLandLot,
+  filterQuery,
   getLandLot,
   listLandLotsInBbox,
   listMyLandLots,
@@ -218,5 +219,39 @@ describe('land lot API client', () => {
 
     await expect(deleteLandLot(FEATURE.id)).resolves.toBeUndefined()
     expect(deletedPath).toBe(`/api/land-lots/${FEATURE.id}`)
+  })
+
+  it('sends only the filters that are set', () => {
+    expect(filterQuery({ minPrice: 0, maxPrice: undefined, status: 'SOLD' })).toEqual({
+      minPrice: 0,
+      status: 'SOLD',
+    })
+    expect(filterQuery({})).toEqual({})
+  })
+
+  it('adds the filters to the map listing and to the search', async () => {
+    const received: URLSearchParams[] = []
+    server.use(
+      http.get('*/api/land-lots', ({ request }) => {
+        received.push(new URL(request.url).searchParams)
+        return HttpResponse.json(COLLECTION)
+      }),
+      http.get('*/api/land-lots/search', ({ request }) => {
+        received.push(new URL(request.url).searchParams)
+        return HttpResponse.json(COLLECTION)
+      }),
+    )
+    const filters = { maxPrice: 300000, minArea: 500, status: 'AVAILABLE' as const }
+
+    await listLandLotsInBbox([-35.21, -5.91, -35.19, -5.89], filters)
+    await searchLandLots({ lon: -35.2, lat: -5.9, radius: 1000 }, filters)
+
+    for (const params of received) {
+      expect(params.get('maxPrice')).toBe('300000')
+      expect(params.get('minArea')).toBe('500')
+      expect(params.get('status')).toBe('AVAILABLE')
+      expect(params.has('minPrice')).toBe(false)
+    }
+    expect(received).toHaveLength(2)
   })
 })

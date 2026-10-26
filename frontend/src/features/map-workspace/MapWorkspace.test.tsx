@@ -390,4 +390,51 @@ describe('MapWorkspace', () => {
     await user.click(screen.getByRole('button', { name: 'New lot' }))
     expect(screen.queryByRole('complementary', { name: 'My lots' })).not.toBeInTheDocument()
   })
+
+  it('searches the same circle again when the filters change', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('*/api/land-lots/search', ({ request }) => {
+        const params = new URL(request.url).searchParams
+        requests.push(params)
+        return HttpResponse.json(params.get('status') === 'SOLD' ? collection([]) : collection())
+      }),
+    )
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    drawCircle(draw()!)
+    await screen.findByText('1 lot found')
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    await user.selectOptions(screen.getByLabelText('Status'), 'SOLD')
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(await screen.findByText('No lots match the filters in this area')).toBeInTheDocument()
+    expect(requests).toHaveLength(2)
+    expect(requests[1].get('lon')).toBe(requests[0].get('lon'))
+    expect(requests[1].get('radius')).toBe(requests[0].get('radius'))
+    expect(requests[1].get('status')).toBe('SOLD')
+    expect(screen.getByRole('button', { name: 'Filters (1)' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }))
+
+    expect(await screen.findByText('1 lot found')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
+  })
+
+  it('reloads the map listing with the filters', async () => {
+    const user = userEvent.setup()
+    const { lotSource } = renderWorkspace()
+    const [existing] = readLandLotFeatures(landLotFeature({ id: 'existing' }))
+    lotSource().addFeature(existing)
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    await user.type(screen.getByLabelText('Max price'), '100')
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    // Dropped now; the visible area loads again, filtered, on the next map render
+    expect(lotSource().getFeatures()).toHaveLength(0)
+    expect(lotSource().get('filters')).toEqual({ maxPrice: 100 })
+  })
 })
