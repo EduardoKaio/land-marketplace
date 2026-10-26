@@ -6,9 +6,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import io.github.eduardokaio.landmarketplace.TestcontainersConfiguration;
-import io.github.eduardokaio.landmarketplace.landlot.application.LandLotRule;
-import io.github.eduardokaio.landmarketplace.landlot.application.NoOverlapRule;
-import io.github.eduardokaio.landmarketplace.landlot.application.ValidGeometryRule;
 import io.github.eduardokaio.landmarketplace.landlot.infrastructure.LandLotRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * End to end through HTTP, rules and PostGIS. Polygons are axis-aligned squares on a grid of
+ * End to end through HTTP, the service and PostGIS. Polygons are axis-aligned squares on a grid of
  * 0.001 degree cells near Ponta Negra; the existing lot is the square from cell (0, 0) to (10, 10).
  */
 @SpringBootTest
@@ -49,9 +46,6 @@ class LandLotControllerTest {
 
 	@Autowired
 	private LandLotRepository repository;
-
-	@Autowired
-	private List<LandLotRule> rules;
 
 	@BeforeEach
 	void cleanDatabase() {
@@ -183,13 +177,6 @@ class LandLotControllerTest {
 	void rejectsMalformedJson() throws Exception {
 		submitBody("{\"title\": ").andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
-	}
-
-	@Test
-	void runsGeometryValidationBeforeTheOverlapQuery() {
-		assertThat(rules).extracting(Object::getClass)
-			.map(Class::getSimpleName)
-			.containsExactly(ValidGeometryRule.class.getSimpleName(), NoOverlapRule.class.getSimpleName());
 	}
 
 	private void expectConflict(String geometry, String existingId) throws Exception {
