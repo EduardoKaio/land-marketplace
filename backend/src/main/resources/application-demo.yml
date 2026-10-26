@@ -1,0 +1,4 @@
+# Demo profile: adds sample lots around Natal (RN) on top of the schema migrations
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo

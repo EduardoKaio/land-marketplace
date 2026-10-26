@@ -17,6 +17,28 @@ frontend/   React application
 docs/       Project documentation
 ```
 
+## Running with Docker
+
+Requirements: Docker with Compose. Nothing else to install.
+
+```bash
+docker compose up --build
+```
+
+| Service | URL | Notes |
+|---|---|---|
+| web | http://localhost:3000 | nginx serves the app and forwards `/api` to the API |
+| api | http://localhost:8080 | Health: `/actuator/health`. OpenAPI UI: `/swagger-ui.html` |
+| db | localhost:15432 | PostGIS. Host port 15432 so it does not clash with a local PostgreSQL |
+
+The API container runs with the `demo` Spring profile, which loads six sample lots around Natal
+(RN), including two neighbors in Ponta Negra that share a border. To start with an empty database
+instead, set the profile to an empty value: `SPRING_PROFILES_ACTIVE= docker compose up --build`.
+
+Start over with a clean database: `docker compose down -v && docker compose up --build`.
+
+Every setting has a default in `docker-compose.yml`; `.env.example` lists them.
+
 ## Running locally
 
 Requirements: Docker with Compose, Java 21, Node.js 22.

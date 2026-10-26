@@ -1,5 +1,7 @@
 name: land-marketplace
 
+# Every variable has a default, so docker compose up needs no .env file (see .env.example)
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -8,6 +10,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-landmarket}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-landmarket}
     ports:
+      # 15432 on the host so it does not clash with a local PostgreSQL on 5432. Inside the Compose
+      # network the API still uses db:5432
       - "${POSTGRES_PORT:-15432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -18,6 +22,40 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-landmarket}
+      DB_USERNAME: ${POSTGRES_USER:-landmarket}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-landmarket}
+      # demo loads sample lots around Natal. "-" instead of ":-" so an empty value means no profile
+      # (an empty database) instead of falling back to demo
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE-demo}
+      LAND_LOT_MAX_SEARCH_RADIUS_METERS: ${LAND_LOT_MAX_SEARCH_RADIUS_METERS:-50000}
+      LAND_LOT_MAX_BBOX_RESULTS: ${LAND_LOT_MAX_BBOX_RESULTS:-500}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      # wget exits with an error when the endpoint answers 503, which is what DOWN returns
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Startup and Flyway migrations happen here; failures in this window do not count
+      start_period: 60s
+
+  web:
+    build: ./frontend
+    depends_on:
+      # nginx resolves the api host name when it starts, so the API must already exist
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:80"
 
 volumes:
   db-data:
