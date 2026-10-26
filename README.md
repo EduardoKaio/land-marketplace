@@ -54,5 +54,5 @@ cd backend && ./mvnw verify              # report: backend/target/site/jacoco/in
 cd frontend && npm run test:coverage     # report: frontend/coverage/index.html
 ```
 
-Backend integration tests use Testcontainers, so Docker must be running. Both builds fail when
-coverage drops below 80%.
+Backend integration tests use Testcontainers, so Docker must be running. The backend build fails
+when coverage drops below 80%, the frontend build below 85%.

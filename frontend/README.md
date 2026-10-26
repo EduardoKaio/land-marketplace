@@ -8,7 +8,7 @@ React (Vite + TypeScript) client. OpenLayers renders and handles the map.
 npm run dev             # dev server on http://localhost:5173, /api proxied to localhost:8080
 npm run build           # type check and production build
 npm test                # unit and component tests
-npm run test:coverage   # tests with coverage; fails below 80%
+npm run test:coverage   # tests with coverage; fails below 85%
 npm run lint            # ESLint
 npm run format          # Prettier
 ```

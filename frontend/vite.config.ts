@@ -23,13 +23,16 @@ export default defineConfig({
         // Test setup and helpers, not application code
         'src/test/**',
         '**/*.test.{ts,tsx}',
+        // Type declarations only: erased at compile time, so there is nothing to execute or cover
         '**/*.d.ts',
+        'src/api/types.ts',
       ],
+      // Above the project minimum of 80%, so a small drop fails the build before it gets there
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
+        lines: 85,
+        functions: 85,
+        branches: 85,
+        statements: 85,
       },
     },
   },
