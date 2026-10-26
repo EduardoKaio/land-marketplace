@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatArea, formatCurrency, pricePerSquareMeter } from './format'
+import { formatArea, formatCurrency, formatDistance, pricePerSquareMeter } from './format'
 
 describe('formatArea', () => {
   it.each([
@@ -11,6 +11,19 @@ describe('formatArea', () => {
     [2_500_000, '250.00 ha'],
   ])('formats %d m² as %s', (squareMeters, expected) => {
     expect(formatArea(squareMeters)).toBe(expected)
+  })
+})
+
+describe('formatDistance', () => {
+  it.each([
+    [0, '0 m'],
+    [850.4, '850 m'],
+    [999.4, '999 m'],
+    [999.6, '1.00 km'],
+    [1250, '1.25 km'],
+    [50_000, '50.00 km'],
+  ])('formats %d m as %s', (meters, expected) => {
+    expect(formatDistance(meters)).toBe(expected)
   })
 })
 

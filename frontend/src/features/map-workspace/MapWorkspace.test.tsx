@@ -5,7 +5,12 @@ import type OlMap from 'ol/Map'
 import Draw, { DrawEvent } from 'ol/interaction/Draw'
 import Feature from 'ol/Feature'
 import { act } from 'react'
-import { describe, expect, it } from 'vitest'
+import Circle from 'ol/geom/Circle'
+import MapBrowserEvent from 'ol/MapBrowserEvent'
+import type { AtPixelOptions } from 'ol/Map'
+import { fromLonLat } from 'ol/proj'
+import { describe, expect, it, vi } from 'vitest'
+import type { LandLotFeatureCollection } from '../../api/types'
 import { useMap } from '../../map/MapContext'
 import { MapView } from '../../map/MapView'
 import { CONFLICT_PROPERTY, landLotStyle } from '../../map/landLotStyle'
@@ -37,20 +42,47 @@ function renderWorkspace() {
       .getInteractions()
       .getArray()
       .find((i) => i instanceof Draw) as Draw | undefined
-  const lotSource = () => {
-    const layer = map
+  // Explore and result layers share the lot style; the explore layer is always added first
+  const lotLayers = () =>
+    map
       .getLayers()
       .getArray()
-      .find((candidate) => (candidate as VectorLayer).getStyle?.() === landLotStyle)
-    return (layer as VectorLayer<LandLotSource>).getSource()!
-  }
-  return { map, draw, lotSource }
+      .filter(
+        (candidate) => (candidate as VectorLayer).getStyle?.() === landLotStyle,
+      ) as VectorLayer<LandLotSource>[]
+  const lotSource = () => lotLayers()[0].getSource()!
+  return { map, draw, lotLayers, lotSource }
 }
 
 function drawPolygon(draw: Draw) {
   act(() => {
     draw.dispatchEvent(new DrawEvent('drawend', new Feature(pontaNegraPolygon())))
   })
+}
+
+/** What Draw does when the user releases the mouse. 1206 Web Mercator units at Ponta Negra are
+ * about 1.2 km of ground. */
+function drawCircle(draw: Draw): Circle {
+  const circle = new Circle(fromLonLat([-35.196, -5.88]), 1206)
+  act(() => {
+    draw.dispatchEvent(new DrawEvent('drawend', new Feature(circle)))
+  })
+  return circle
+}
+
+function collection(features = [landLotFeature()], truncated = false): LandLotFeatureCollection {
+  return { type: 'FeatureCollection', features, truncated }
+}
+
+function serveSearch(response: () => Response): { url: () => URL } {
+  let url: URL | null = null
+  server.use(
+    http.get('*/api/land-lots/search', ({ request }) => {
+      url = new URL(request.url)
+      return response()
+    }),
+  )
+  return { url: () => url! }
 }
 
 describe('MapWorkspace', () => {
@@ -119,5 +151,137 @@ describe('MapWorkspace', () => {
 
     expect(existing.get(CONFLICT_PROPERTY)).toBeUndefined()
     expect(screen.getByText(/Click to add vertices/)).toBeInTheDocument()
+  })
+
+  it('searches the drawn circle and shows only the lots found', async () => {
+    const request = serveSearch(() => HttpResponse.json(collection()))
+    const user = userEvent.setup()
+    const { map, draw, lotLayers } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    expect(screen.getByText(/Press, drag and release/)).toBeInTheDocument()
+
+    drawCircle(draw()!)
+
+    expect(await screen.findByText('1 lot found')).toBeInTheDocument()
+    const params = request.url().searchParams
+    expect(Number(params.get('lon'))).toBeCloseTo(-35.196, 6)
+    expect(Number(params.get('lat'))).toBeCloseTo(-5.88, 6)
+    expect(Math.abs(Number(params.get('radius')) / 1200 - 1)).toBeLessThan(0.005)
+    const [exploreLayer, resultLayer] = lotLayers()
+    expect(exploreLayer.getVisible()).toBe(false)
+    expect(resultLayer.getSource()!.getFeatureById(landLotFeature().id)).not.toBeNull()
+    // The circle stays on the map under the results
+    const circleLayer = map
+      .getLayers()
+      .getArray()
+      .find((layer) =>
+        (layer as VectorLayer)
+          .getSource?.()
+          ?.getFeatures?.()
+          .some((feature: Feature) => feature.getGeometry() instanceof Circle),
+      )
+    expect(circleLayer).toBeDefined()
+  })
+
+  it('opens the popup for the lots found', async () => {
+    serveSearch(() => HttpResponse.json(collection()))
+    const user = userEvent.setup()
+    const { map, draw, lotLayers } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    drawCircle(draw()!)
+    await screen.findByText('1 lot found')
+    const resultLayer = lotLayers()[1]
+    const [lot] = resultLayer.getSource()!.getFeatures()
+    const hitTest = vi
+      .spyOn(map, 'forEachFeatureAtPixel')
+      .mockImplementation((_pixel, callback) => callback(lot, resultLayer, lot.getGeometry()!))
+
+    act(() => {
+      map.dispatchEvent(new MapBrowserEvent('singleclick', map, new PointerEvent('click')))
+    })
+
+    // hidden: jsdom never renders the map, so OpenLayers keeps overlays at display: none
+    expect(screen.getByRole('dialog', { name: 'Corner lot', hidden: true })).toBeInTheDocument()
+    const { layerFilter } = hitTest.mock.calls[0][2] as AtPixelOptions
+    expect(layerFilter!(resultLayer)).toBe(true)
+    expect(layerFilter!(lotLayers()[0])).toBe(false)
+  })
+
+  it('counts several lots and warns when the server capped the answer', async () => {
+    const second = landLotFeature({ id: 'second' })
+    serveSearch(() => HttpResponse.json(collection([landLotFeature(), second], true)))
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    drawCircle(draw()!)
+
+    expect(await screen.findByText('2 lots found')).toBeInTheDocument()
+    expect(screen.getByText(/More lots match/)).toBeInTheDocument()
+  })
+
+  it('shows a friendly empty state when no lot is in the circle', async () => {
+    serveSearch(() => HttpResponse.json(collection([])))
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    drawCircle(draw()!)
+
+    expect(await screen.findByText('No lots in this area')).toBeInTheDocument()
+    expect(screen.getByText(/Try a larger circle/)).toBeInTheDocument()
+  })
+
+  it('shows why the server rejected the search', async () => {
+    serveSearch(() =>
+      HttpResponse.json(
+        {
+          status: 400,
+          detail: 'The search radius must be at most 50000 meters.',
+          maxRadiusMeters: 50000,
+        },
+        { status: 400, headers: { 'Content-Type': 'application/problem+json' } },
+      ),
+    )
+    const user = userEvent.setup()
+    const { draw, lotLayers } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    drawCircle(draw()!)
+
+    expect(
+      await screen.findByText('The search radius must be at most 50000 meters.'),
+    ).toBeInTheDocument()
+    expect(lotLayers()[0].getVisible()).toBe(true)
+  })
+
+  it('shows a generic message when the search fails on the server side', async () => {
+    serveSearch(() => new HttpResponse(null, { status: 503 }))
+    const user = userEvent.setup()
+    const { draw } = renderWorkspace()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    drawCircle(draw()!)
+
+    expect(await screen.findByText('Could not search lots. Please try again.')).toBeInTheDocument()
+  })
+
+  it('clears the search and goes back to exploring', async () => {
+    serveSearch(() => HttpResponse.json(collection()))
+    const user = userEvent.setup()
+    const { map, draw, lotLayers } = renderWorkspace()
+    const layersBefore = map.getLayers().getLength()
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    drawCircle(draw()!)
+    await screen.findByText('1 lot found')
+
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+
+    expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText('1 lot found')).not.toBeInTheDocument()
+    expect(draw()).toBeUndefined()
+    expect(map.getLayers().getLength()).toBe(layersBefore)
+    expect(lotLayers()).toHaveLength(1)
+    expect(lotLayers()[0].getVisible()).toBe(true)
   })
 })

@@ -1,0 +1,84 @@
+.lot-popup {
+  width: min(18rem, 80vw);
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2933;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 10px #00000040;
+}
+
+.lot-popup__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lot-popup h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lot-popup__close {
+  padding: 0 0.25rem;
+  border: none;
+  background: none;
+  color: #52606d;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lot-popup__status {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.lot-popup__status--available {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.lot-popup__status--sold {
+  background: #eceff1;
+  color: #4b5563;
+}
+
+.lot-popup__figures {
+  display: flex;
+  gap: 1rem;
+  margin: 0.6rem 0;
+}
+
+.lot-popup__figures dt {
+  color: #52606d;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.lot-popup__figures dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.lot-popup__description {
+  margin: 0 0 0.6rem;
+  white-space: pre-line;
+}
+
+.lot-popup__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-style: normal;
+}
+
+.lot-popup__contact a {
+  color: #1565c0;
+}

@@ -39,3 +39,30 @@
   gap: 0.25rem;
   cursor: pointer;
 }
+
+/* Short instruction for the active tool */
+.map-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  background: #1f2933e6;
+  color: #ffffff;
+  font-size: 0.85rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* Live measurement that follows the sketch (area, radius) */
+.map-tooltip {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #1f2933d9;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}

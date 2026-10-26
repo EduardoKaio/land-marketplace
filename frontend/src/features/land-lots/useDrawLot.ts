@@ -51,7 +51,7 @@ export function useDrawLot(snapSource: VectorSource<Feature<Polygon>>): DrawLot 
     // Live area label. Written straight to the DOM: going through React state would re-render on
     // every mouse move while sketching
     const tooltipElement = document.createElement('div')
-    tooltipElement.className = 'area-tooltip'
+    tooltipElement.className = 'map-tooltip'
     const tooltip = new Overlay({
       element: tooltipElement,
       positioning: 'center-center',

@@ -41,7 +41,7 @@ function finishDrawing(draw: Draw, geometry: Polygon) {
 }
 
 function tooltip(): HTMLElement | null {
-  return document.querySelector('.area-tooltip')
+  return document.querySelector('.map-tooltip')
 }
 
 function relativeDifference(actual: number, expected: number): number {

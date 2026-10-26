@@ -1,4 +1,5 @@
 const SQUARE_METERS_PER_HECTARE = 10_000
+const METERS_PER_KILOMETER = 1000
 
 const wholeNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 const twoDecimals = new Intl.NumberFormat('en-US', {
@@ -13,6 +14,18 @@ export function formatArea(squareMeters: number): string {
     return `${wholeNumber.format(squareMeters)} m²`
   }
   return `${twoDecimals.format(squareMeters / SQUARE_METERS_PER_HECTARE)} ha`
+}
+
+/**
+ * Meters below one kilometer, kilometers from there: "850 m", "1.25 km". Rounds first, so 999.6
+ * reads "1.00 km" instead of "1,000 m".
+ */
+export function formatDistance(meters: number): string {
+  const rounded = Math.round(meters)
+  if (rounded < METERS_PER_KILOMETER) {
+    return `${wholeNumber.format(rounded)} m`
+  }
+  return `${twoDecimals.format(meters / METERS_PER_KILOMETER)} km`
 }
 
 /** Price divided by area, or null while either is missing or not positive. */
