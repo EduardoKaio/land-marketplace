@@ -67,7 +67,7 @@ describe('LotPopup', () => {
       landLotFeature({
         properties: {
           ...landLotFeature().properties,
-          contact: { name: 'Kaio', phone: '+55 84 99999-0000', email: 'kaio@example.com' },
+          contact: { name: 'Kaio', phone: '(84) 99999-0000', email: 'kaio@example.com' },
         },
       }),
     )
@@ -81,9 +81,9 @@ describe('LotPopup', () => {
     expect(popup).toHaveTextContent('R$20.41')
     expect(popup).toHaveTextContent('Flat terrain')
     expect(popup).toHaveTextContent('Kaio')
-    expect(screen.getByRole('link', { name: '+55 84 99999-0000', hidden: true })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '(84) 99999-0000', hidden: true })).toHaveAttribute(
       'href',
-      'tel:+55 84 99999-0000',
+      'tel:+5584999990000',
     )
     expect(screen.getByRole('link', { name: 'kaio@example.com', hidden: true })).toHaveAttribute(
       'href',

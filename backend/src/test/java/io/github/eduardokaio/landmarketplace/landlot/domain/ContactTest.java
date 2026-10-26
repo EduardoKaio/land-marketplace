@@ -21,9 +21,9 @@ class ContactTest {
 
 	@Test
 	void acceptsPhoneWithoutEmail() {
-		Contact contact = new Contact("Kaio", "+55 84 99999-0000", null);
+		Contact contact = new Contact("Kaio", "(84) 99999-0000", null);
 
-		assertThat(contact.phone()).isEqualTo("+55 84 99999-0000");
+		assertThat(contact.phone()).isEqualTo("(84) 99999-0000");
 		assertThat(contact.email()).isNull();
 	}
 

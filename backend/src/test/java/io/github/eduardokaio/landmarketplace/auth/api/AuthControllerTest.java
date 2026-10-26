@@ -110,9 +110,11 @@ class AuthControllerTest {
 		assertThat(accounts.count()).isZero();
 	}
 
-	@Test
-	void rejectsAnInvalidEmail() throws Exception {
-		register("Kaio", "not-an-email", "secret123").andExpect(status().isBadRequest())
+	// "ana@localhost" passes a plain @Email; the domain needs a dot, as the frontend requires
+	@ParameterizedTest
+	@ValueSource(strings = { "not-an-email", "ana@localhost", "ana@example.c" })
+	void rejectsAnInvalidEmail(String email) throws Exception {
+		register("Kaio", email, "secret123").andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errors[0].field").value("email"));
 	}
 

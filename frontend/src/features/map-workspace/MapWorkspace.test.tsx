@@ -146,7 +146,7 @@ describe('MapWorkspace', () => {
     await user.type(screen.getByLabelText('Total price (BRL)'), '1000')
     await user.type(screen.getByLabelText('Description'), 'Desc')
     await user.type(screen.getByLabelText('Name'), 'Kaio')
-    await user.type(screen.getByLabelText('Phone'), '123')
+    await user.type(screen.getByLabelText('Phone'), '84999998888')
     await user.click(screen.getByRole('button', { name: 'Publish lot' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('overlaps 1 existing lot')

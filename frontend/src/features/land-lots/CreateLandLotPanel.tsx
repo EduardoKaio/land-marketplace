@@ -7,6 +7,7 @@ import { createLandLot } from '../../api/landLots'
 import { MY_LOTS_KEY } from '../../api/queryKeys'
 import type { LandLotFeature } from '../../api/types'
 import { formatArea, formatCurrency, pricePerSquareMeter } from '../../shared/format'
+import { maskPhone } from '../../shared/phone'
 import { useToast } from '../../shared/ui/toast/ToastContext'
 import {
   EMPTY_FORM,
@@ -38,12 +39,17 @@ export function CreateLandLotPanel({
     register,
     handleSubmit,
     setError,
+    trigger,
     control,
     formState: { errors },
   } = useForm<CreateLandLotFormValues>({
     resolver: zodResolver(createLandLotSchema),
     defaultValues: EMPTY_FORM,
+    // Errors show up when the user leaves a field, not only on submit, and then follow each key
+    mode: 'onTouched',
   })
+  const phone = register('contact.phone')
+  const email = register('contact.email')
   const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: createLandLot,
@@ -108,10 +114,35 @@ export function CreateLandLotPanel({
             <input id="lot-contact-name" {...register('contact.name')} />
           </Field>
           <Field id="lot-contact-phone" label="Phone" error={errors.contact?.phone}>
-            <input id="lot-contact-phone" type="tel" {...register('contact.phone')} />
+            <input
+              id="lot-contact-phone"
+              type="tel"
+              autoComplete="tel-national"
+              placeholder="(84) 99999-8888"
+              {...phone}
+              // Masks the input before react-hook-form reads it, so the form holds the masked text
+              onChange={(event) => {
+                event.target.value = maskPhone(event.target.value)
+                return phone.onChange(event)
+              }}
+            />
           </Field>
           <Field id="lot-contact-email" label="Email" error={errors.contact?.email}>
-            <input id="lot-contact-email" type="email" {...register('contact.email')} />
+            <input
+              id="lot-contact-email"
+              type="email"
+              autoComplete="email"
+              {...email}
+              // "Enter a phone or an email" sits under the phone, so typing an email must check the
+              // phone again. Not the deps option: in onTouched mode it waits for the email to be
+              // touched, and the error would stay while the first email is typed
+              onChange={async (event) => {
+                await email.onChange(event)
+                if (errors.contact?.phone) {
+                  await trigger('contact.phone')
+                }
+              }}
+            />
           </Field>
         </fieldset>
         <div className="lot-panel__actions">

@@ -89,6 +89,54 @@ describe('CreateLandLotPanel', () => {
     expect(onCreated).not.toHaveBeenCalled()
   })
 
+  it('masks the phone as it is typed and sends it masked', async () => {
+    let body: CreateLandLotRequest | undefined
+    server.use(
+      http.post('*/api/land-lots', async ({ request }) => {
+        body = (await request.json()) as CreateLandLotRequest
+        return HttpResponse.json(landLotFeature(), { status: 201 })
+      }),
+    )
+    renderPanel()
+    const user = await fillValidForm()
+    const phone = screen.getByLabelText('Phone')
+
+    await user.type(phone, '84999998888')
+
+    expect(phone).toHaveValue('(84) 99999-8888')
+    await user.click(screen.getByRole('button', { name: 'Publish lot' }))
+    await screen.findByRole('status')
+    expect(body?.contact).toEqual({
+      name: 'Kaio',
+      phone: '(84) 99999-8888',
+      email: 'kaio@example.com',
+    })
+  })
+
+  it('shows a field error when the user leaves the field', async () => {
+    renderPanel()
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Phone'), '849999')
+    await user.type(screen.getByLabelText('Email'), 'ana@localhost')
+    await user.tab()
+
+    expect(screen.getByText('Enter a phone like (84) 99999-8888')).toBeInTheDocument()
+    expect(screen.getByText('Enter a valid email')).toBeInTheDocument()
+  })
+
+  it('clears "phone or email" once an email is typed', async () => {
+    renderPanel()
+    const user = userEvent.setup()
+    await user.click(screen.getByLabelText('Phone'))
+    await user.tab()
+    expect(screen.getByText('Enter a phone or an email')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Email'), 'kaio@example.com')
+
+    expect(screen.queryByText('Enter a phone or an email')).not.toBeInTheDocument()
+  })
+
   it('explains an overlap and reports the conflicting lots', async () => {
     server.use(http.post('*/api/land-lots', () => problem(409, { conflictingLotIds: ['lot-a'] })))
     const { onConflict, onCreated } = renderPanel()

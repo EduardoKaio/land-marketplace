@@ -11,7 +11,7 @@ final class LandLotApiExamples {
 			  "title": "Corner lot near Ponta Negra",
 			  "price": 250000.00,
 			  "description": "Flat terrain, ready to build, two blocks from the beach.",
-			  "contact": { "name": "Kaio Eduardo", "phone": "+55 84 99999-0000", "email": "kaio@example.com" },
+			  "contact": { "name": "Kaio Eduardo", "phone": "(84) 99999-0000", "email": "kaio@example.com" },
 			  "geometry": {
 			    "type": "Polygon",
 			    "coordinates": [[[-35.196, -5.880], [-35.195, -5.880], [-35.195, -5.879],
@@ -34,7 +34,7 @@ final class LandLotApiExamples {
 			    "areaSquareMeters": 12246.04,
 			    "pricePerSquareMeter": 20.41,
 			    "description": "Flat terrain, ready to build, two blocks from the beach.",
-			    "contact": { "name": "Kaio Eduardo", "phone": "+55 84 99999-0000", "email": "kaio@example.com" },
+			    "contact": { "name": "Kaio Eduardo", "phone": "(84) 99999-0000", "email": "kaio@example.com" },
 			    "status": "AVAILABLE",
 			    "createdAt": "2026-10-24T14:30:00Z"
 			  }

@@ -60,6 +60,15 @@
   min-width: 0;
 }
 
+/* Inputs have an intrinsic width of about 20 characters and do not shrink below it, so two of
+   them side by side overflowed the card and scrolled it sideways. Filling the field instead
+   lets the card decide the width */
+.filters__form input,
+.filters__form select {
+  width: 100%;
+  min-width: 0;
+}
+
 .filters__form select {
   padding: 0.45rem 0.55rem;
   border: 1px solid #c9ced6;

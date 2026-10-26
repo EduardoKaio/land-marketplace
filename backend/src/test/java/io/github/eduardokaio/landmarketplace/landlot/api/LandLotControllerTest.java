@@ -214,7 +214,7 @@ class LandLotControllerTest {
 	private ResultActions submit(String geometry) throws Exception {
 		return submitBody("""
 				{"title": "Corner lot", "price": 250000.00, "description": "Flat terrain",
-				 "contact": {"name": "Kaio Eduardo", "phone": "+55 84 99999-0000", "email": "kaio@example.com"},
+				 "contact": {"name": "Kaio Eduardo", "phone": "(84) 99999-0000", "email": "kaio@example.com"},
 				 "geometry": %s}""".formatted(geometry));
 	}
 

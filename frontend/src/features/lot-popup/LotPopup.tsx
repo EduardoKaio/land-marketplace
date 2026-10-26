@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import type { LandLotProperties, LandLotStatus } from '../../api/types'
 import type { LandLotLayer } from '../../map/landLotLayer'
 import { formatArea, formatCurrency } from '../../shared/format'
+import { telHref } from '../../shared/phone'
 import { useLotPopup } from './useLotPopup'
 import './lotPopup.css'
 
@@ -49,7 +50,7 @@ function LotDetails({ lot, onClose }: { lot: LandLotProperties; onClose: () => v
       <p className="lot-popup__description">{lot.description}</p>
       <address className="lot-popup__contact">
         <strong>{contact.name}</strong>
-        {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+        {contact.phone && <a href={telHref(contact.phone)}>{contact.phone}</a>}
         {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
       </address>
     </article>

@@ -146,8 +146,9 @@ class LandLotAccessTest {
 				{"title": " ", "price": 1, "description": "Desc", "contact": {"name": "Kaio", "phone": "1"}}""")
 			.with(as(ownerId)))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.errors[0].field").value("status"))
-			.andExpect(jsonPath("$.errors[1].field").value("title"));
+			.andExpect(jsonPath("$.errors[0].field").value("contact.phone"))
+			.andExpect(jsonPath("$.errors[1].field").value("status"))
+			.andExpect(jsonPath("$.errors[2].field").value("title"));
 	}
 
 	// Lots created before accounts existed have no owner: still public, but nobody can change them

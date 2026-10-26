@@ -1,5 +1,6 @@
 package io.github.eduardokaio.landmarketplace.auth.api;
 
+import io.github.eduardokaio.landmarketplace.shared.api.ValidationPatterns;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,7 +13,7 @@ import jakarta.validation.constraints.Size;
  */
 public record RegisterRequest(
 		@NotBlank @Size(max = 120) String name,
-		@NotBlank @Email @Size(max = 254) String email,
+		@NotBlank @Email(regexp = ValidationPatterns.EMAIL_WITH_DOMAIN) @Size(max = 254) String email,
 		@NotNull @Size(min = 8, max = 64)
 		@Pattern(regexp = "^(?=.*\\p{L})(?=.*\\d).*$", message = "must contain at least one letter and one digit")
 		String password) {

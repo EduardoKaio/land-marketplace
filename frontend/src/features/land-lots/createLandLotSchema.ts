@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { CreateLandLotRequest, PolygonGeometry } from '../../api/types'
+import { isBrazilianPhone } from '../../shared/phone'
 
 const EMAIL = z.email()
 
@@ -19,7 +20,13 @@ export const createLandLotSchema = z.object({
   contact: z
     .object({
       name: z.string().trim().min(1, 'Enter a contact name').max(120, 'Use at most 120 characters'),
-      phone: z.string().trim().max(30, 'Use at most 30 characters'),
+      phone: z
+        .string()
+        .trim()
+        .refine(
+          (phone) => phone === '' || isBrazilianPhone(phone),
+          'Enter a phone like (84) 99999-8888',
+        ),
       email: z
         .string()
         .trim()

@@ -36,7 +36,7 @@ public final class LandLotFixtures {
 	}
 
 	public static Contact contact() {
-		return new Contact("Kaio Eduardo", "+55 84 99999-0000", "kaio@example.com");
+		return new Contact("Kaio Eduardo", "(84) 99999-0000", "kaio@example.com");
 	}
 
 	public static LandLot pontaNegraLot() {
